@@ -15,8 +15,6 @@ from .localization.localization import Localizer
 
 from .presence.presence import Presence
 
-from .webserver import server
-
 # weird console window management stuff
 kernel32 = ctypes.WinDLL('kernel32')
 user32 = ctypes.WinDLL('user32')
@@ -49,7 +47,7 @@ class Startup:
             if Localizer.get_config_value("region",0) == "": # try to autodetect region on first launch
                 self.check_region() 
 
-            ctypes.windll.kernel32.SetConsoleTitleW(f"valorant-rpc {Localizer.get_config_value('version')}") 
+            ctypes.windll.kernel32.SetConsoleTitleW(f"VALORANT-ystr {Localizer.get_config_value('version')}") 
 
             color_print([("Red", Localizer.get_localized_text("prints","startup","wait_for_rpc"))])
             try:
@@ -57,7 +55,7 @@ class Startup:
                 Startup.clear_line()
             except Exception as e:
                 traceback.print_exc()
-                color_print([("Cyan",f"{Localizer.get_localized_text('prints','startup','discord_not_detected')} ({e})")])
+                # color_print([("Cyan",f"{Localizer.get_localized_text('prints','startup','discord_not_detected')} ({e})")])
                 if not Processes.are_processes_running():
                     color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
                     self.start_game()
@@ -69,6 +67,7 @@ class Startup:
     def run(self):
         self.presence.update_presence("startup")
         Checker.check_version(self.config)
+
         if not Processes.are_processes_running():
             color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
             self.start_game()
@@ -81,9 +80,7 @@ class Startup:
         if self.client.fetch_presence() is None:
             self.wait_for_presence()
 
-        self.check_run_cli()
         self.dispatch_presence()
-        self.dispatch_webserver() 
         
         color_print([("LimeGreen",f"{Localizer.get_localized_text('prints','startup','startup_successful')}\n")])
         time.sleep(5)
@@ -91,13 +88,6 @@ class Startup:
 
         self.systray_thread.join()
         self.presence_thread.stop()
-        
-
-    def dispatch_webserver(self):
-        server.client = self.client 
-        server.config = self.config
-        self.webserver_thread = Thread(target=server.start,daemon=True)
-        self.webserver_thread.start()
         
     def dispatch_presence(self):
         self.presence_thread = Thread(target=self.presence.init_loop,daemon=True)
@@ -145,13 +135,8 @@ class Startup:
                 self.systray.exit()
                 os._exit(1)
             time.sleep(1)
-        Startup.clear_line()
 
-    def check_run_cli(self):
-        if Localizer.get_config_value("startup","auto_launch_skincli"):
-            skincli_path = self.installs.get("valorant-skin-cli")
-            if skincli_path is not None:
-                subprocess.Popen(f"start {skincli_path}", shell=True)
+        Startup.clear_line()
 
     def check_region(self):
         color_print([("Red bold",Localizer.get_localized_text("prints","startup","autodetect_region"))])

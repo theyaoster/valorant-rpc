@@ -32,7 +32,7 @@ class Systray:
             item('reload', Systray.restart),
             item('exit', self.exit)
         )
-        self.systray = icon("valorant-rpc", systray_image, "valorant-rpc", systray_menu)
+        self.systray = icon("VALORANT-ystr", systray_image, "VALORANT-ystr", systray_menu)
         self.systray.run()
 
     def exit(self):
@@ -48,7 +48,7 @@ class Systray:
 
     @staticmethod
     def generate_icon():
-        urllib.request.urlretrieve('https://raw.githubusercontent.com/colinhartigan/valorant-rpc/v2/favicon.ico',Filepath.get_path(os.path.join(Filepath.get_appdata_folder(),'favicon.ico')))
+        urllib.request.urlretrieve('https://raw.githubusercontent.com/theyaoster/valorant-rpc/v2/favicon.ico',Filepath.get_path(os.path.join(Filepath.get_appdata_folder(),'favicon.ico')))
 
     @staticmethod 
     def modify_config():

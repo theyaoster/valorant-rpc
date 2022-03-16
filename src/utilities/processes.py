@@ -17,7 +17,7 @@ class Processes:
         for proc in psutil.process_iter():
             processes.append(proc.name())
 
-        if len([proc for proc in processes if proc == "valorant-rpc.exe"]) > 2:
+        if len([proc for proc in processes if proc == "VALORANT-ystr.exe"]) > 2:
             return True
 
         return False

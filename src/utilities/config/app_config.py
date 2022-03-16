@@ -6,8 +6,10 @@ from ..filepath import Filepath
 from ...localization.locales import Locales
 from ...localization.localization import Localizer
 
+PLACEHOLDER_VALUE = f"THIS IS A PLACEHOLDER"
+
 default_config = {
-    "version": "v3.2.1",
+    "version": "v0.1.0",
     "region": ["",Client.fetch_regions()],
     "client_id": 811469787657928704,
     "presence_refresh_interval": 3,
@@ -31,9 +33,12 @@ default_config = {
     "startup": {
         "game_launch_timeout": 50,
         "presence_timeout": 60,
-        "show_github_link": True,
-        "auto_launch_skincli": True,
+        "show_github_link": False,
+        "auto_launch_skincli": False,
     },
+    "endpoint": PLACEHOLDER_VALUE, # Adding these here so they aren't autodeleted upon launch
+    "name": PLACEHOLDER_VALUE,
+    "secret": PLACEHOLDER_VALUE
 }
 
 class Config:
@@ -41,11 +46,16 @@ class Config:
     @staticmethod
     def fetch_config():
         try:
+            os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
             with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))) as f:
                 config = json.load(f)
                 return config
         except:
-            return Config.create_default_config()
+            config_path = Filepath.get_path(os.path.join(os.path.join(Filepath.get_appdata_folder(), 'config.json')))
+            print(f"Generating default config at {config_path} since no config.json currently exists. Select your locale, then close this window (which will display some URL-related error), then modify the config values that are placeholders (you'll know which ones those are).")
+            print()
+            Config.modify_config(default_config)
+            return default_config
 
     @staticmethod
     def modify_config(new_config):

@@ -10,7 +10,7 @@ class Filepath:
 
     @staticmethod 
     def get_appdata_folder():
-        return Filepath.get_path(os.path.join(os.getenv('APPDATA'), 'valorant-rpc'))
+        return Filepath.get_path(os.path.join(os.getenv('APPDATA'), 'VALORANT-ystr'))
 
     @staticmethod
     def get_programdata_folder():

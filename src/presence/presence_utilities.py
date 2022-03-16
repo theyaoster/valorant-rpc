@@ -13,7 +13,7 @@ class Utilities:
         elif data["partyAccessibility"] == "OPEN":
             party_state = Localizer.get_localized_text("presences","party_states","open")
 
-        party_size = [data["partySize"],data["maxPartySize"]] if data["partySize"] > 1 or data["partyAccessibility"] == "OPEN" else None
+        party_size = [data["partySize"],data["maxPartySize"]] if data["partySize"] > 1 else [1, 1]
         if party_size is not None:
             if party_size[0] == 0: 
                 party_size[0] = 1
@@ -67,6 +67,12 @@ class Utilities:
     def fetch_mode_data(data, content_data):
         image = f"mode_{data['queueId'] if data['queueId'] in content_data['modes_with_icons'] else 'discovery'}"
         mode_name = content_data['queue_aliases'][data['queueId']] if data["queueId"] in content_data["queue_aliases"].keys() else "Custom"
+
+        # For some reason, Custom games have a queueId of onefa, same as Replication...
+        if "Custom" in data['provisioningFlow'] and "Custom" not in mode_name:
+            mode_name = "Custom"
+            data["queueId"] = "custom"
+
         mode_name = Utilities.localize_content_name(mode_name, "presences", "modes", data["queueId"])
         return image,mode_name
 
@@ -104,3 +110,11 @@ class Utilities:
         '''
 
         return None
+
+    @staticmethod
+    def get_party_status(data):
+        size = Utilities.build_party_state(data)[1]
+        if (size[0] == 1):
+            return "(solo)"
+        else:
+            return f"(in a {size[0]}-stack)"

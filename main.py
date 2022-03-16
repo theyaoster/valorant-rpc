@@ -10,11 +10,14 @@ user32 = ctypes.WinDLL('user32')
 hWnd = kernel32.GetConsoleWindow()
 
 if __name__ == "__main__":
-    color_print([("Tomato",f""" _   _____   __   ____  ___  ___   _  ________                
-| | / / _ | / /  / __ \/ _ \/ _ | / |/ /_  __/__________  ____
-| |/ / __ |/ /__/ /_/ / , _/ __ |/    / / / /___/ __/ _ \/ __/
-|___/_/ |_/____/\____/_/|_/_/ |_/_/|_/ /_/     /_/ / .__/\__/ 
-                                                  /_/ """),("White",f"{default_config['version']}\n")])
+    print()
+    color_print([("Tomato",f""" _  _  __    __    _____  ____    __    _  _  ____     _  _  ___  ____  ____ 
+( \/ )/__\  (  )  (  _  )(  _ \  /__\  ( \( )(_  _)___( \/ )/ __)(_  _)(  _ \ 
+ \  //(__)\  )(__  )(_)(  )   / /(__)\  )  (   )( (___)\  / \__ \  )(   )   /
+  \/(__)(__)(____)(_____)(_)\_)(__)(__)(_)\_) (__)     (__) (___/ (__) (_)\_) """),("White",f"{default_config['version']}\n")])
+    color_print([("White", "Original code by colinhartigan.")])
+    print()
+
     try:
         app = Startup()
     except:

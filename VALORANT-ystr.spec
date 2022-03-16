@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['D:\\colin\\programming\\VALORANT\\valorant-rpc'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=['pystray._win32'],
@@ -26,7 +26,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,  
           [],
-          name='valorant-rpc',
+          name='VALORANT-ystr',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
