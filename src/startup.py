@@ -42,24 +42,23 @@ class Startup:
             Localizer.config = self.config
 
             Logger.debug(self.config)
-            self.client = None                
-
-            if Localizer.get_config_value("region",0) == "": # try to autodetect region on first launch
-                self.check_region() 
+            self.client = None
 
             ctypes.windll.kernel32.SetConsoleTitleW(f"VALORANT-ystr {Localizer.get_config_value('version')}") 
 
             color_print([("Red", Localizer.get_localized_text("prints","startup","wait_for_rpc"))])
+            if not Processes.are_processes_running():
+                color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
+                self.start_game()
+
             try:
                 self.presence = Presence(self.config)
                 Startup.clear_line()
-            except Exception as e:
+            except Exception:
                 traceback.print_exc()
-                # color_print([("Cyan",f"{Localizer.get_localized_text('prints','startup','discord_not_detected')} ({e})")])
-                if not Processes.are_processes_running():
-                    color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
-                    self.start_game()
-                    os._exit(1)
+
+            if Localizer.get_config_value("region",0) == "": # try to autodetect region on first launch
+                self.check_region()
 
             self.run()
 

@@ -32,10 +32,10 @@ Locales = {
                 "set_prompt": "set value for"
             },
             "startup": {
-                "wait_for_rpc": "waiting for rpc client",
+                "wait_for_rpc": "waiting for ystr client",
                 "discord_not_detected": "discord not detected! starting game without presence...",
                 "starting_valorant": "starting VALORANT",
-                "startup_successful": "program startup successful, hiding window in 5 seconds",
+                "startup_successful": "program startup successful, hiding window in 5 seconds (you can show me again in the system tray)",
                 "waiting_for_presence": "waiting for presence...",
                 "waiting_for_valorant": "waiting for VALORANT...",
                 "autodetect_region": "attempting to autodetect region",

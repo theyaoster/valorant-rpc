@@ -5,11 +5,12 @@ from ..filepath import Filepath
 
 from ...localization.locales import Locales
 from ...localization.localization import Localizer
+from ..logging import Logger
 
 PLACEHOLDER_VALUE = f"THIS IS A PLACEHOLDER"
 
 default_config = {
-    "version": "v0.1.0",
+    "version": "v0.1.1",
     "region": ["",Client.fetch_regions()],
     "client_id": 811469787657928704,
     "presence_refresh_interval": 3,
@@ -17,8 +18,6 @@ default_config = {
     "presences": {
         "menu": {
             "show_rank_in_comp_lobby": True,
-            #"show_join_button_with_open_party": True,
-            #"allow_join_requests": False,
         },
         "modes": {
             "all": {
@@ -45,17 +44,26 @@ class Config:
 
     @staticmethod
     def fetch_config():
-        try:
+        config_path = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))
+
+        # Handle first-time startup when config file doesn't exist
+        if not os.path.isfile(config_path):
             os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
+            Config.modify_config(default_config) # write default config
+            print(f"Generated default config at {config_path} since no config.json currently exists. Modify the config values that are placeholders (in the file that just opened), then hit enter in this window to proceed.")
+            print()
+            os.startfile(config_path) # open config file in default editor
+
+            typed = None
+            while typed != "done":
+                typed = input("Type \"done\" to proceed once you've updated the config values... ")
+
+        try:
             with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))) as f:
                 config = json.load(f)
                 return config
-        except:
-            config_path = Filepath.get_path(os.path.join(os.path.join(Filepath.get_appdata_folder(), 'config.json')))
-            print(f"Generating default config at {config_path} since no config.json currently exists. Select your locale, then close this window (which will display some URL-related error), then modify the config values that are placeholders (you'll know which ones those are).")
-            print()
-            Config.modify_config(default_config)
-            return default_config
+        except Exception as e:
+            Logger.debug(f"Something went wrong while fetching config: {e}")
 
     @staticmethod
     def modify_config(new_config):
