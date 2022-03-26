@@ -1,9 +1,10 @@
 from InquirerPy.utils import color_print
-import sys, psutil, time, cursor, valclient, ctypes, traceback, os, subprocess
+from colorama import Fore, Style, Cursor
+from colorama.ansi import clear_line
+import sys, psutil, time, cursor, valclient, ctypes, traceback, os
 
 from .utilities.killable_thread import Thread
 from .utilities.config.app_config import Config
-from .utilities.config.modify_config import Config_Editor
 from .utilities.processes import Processes
 from .utilities.rcs import Riot_Client_Services
 from .utilities.systray import Systray
@@ -19,8 +20,8 @@ from .presence.presence import Presence
 kernel32 = ctypes.WinDLL('kernel32')
 user32 = ctypes.WinDLL('user32')
 hWnd = kernel32.GetConsoleWindow()
-kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), (0x4|0x80|0x20|0x2|0x10|0x1|0x00|0x100)) #disable inputs to console
-kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7) #allow for ANSI sequences
+kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), (0x4|0x80|0x20|0x2|0x10|0x1|0x00|0x100)) # disable inputs to console
+kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7) # allow for ANSI sequences
 
 class Startup:
     def __init__(self):
@@ -36,6 +37,7 @@ class Startup:
                     Config.modify_config(config)
                     Systray.restart()
 
+            self.systray = None # This will be set later
             self.installs = Program_Data.fetch_installs()
             Localizer.set_locale(self.config)
             self.config = Config.check_config()
@@ -44,18 +46,18 @@ class Startup:
             Logger.debug(self.config)
             self.client = None
 
-            ctypes.windll.kernel32.SetConsoleTitleW(f"VALORANT-ystr {Localizer.get_config_value('version')}") 
-
-            color_print([("Red", Localizer.get_localized_text("prints","startup","wait_for_rpc"))])
-            if not Processes.are_processes_running():
-                color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
-                self.start_game()
+            ctypes.windll.kernel32.SetConsoleTitleW(f"VALORANT-ystr {Localizer.get_config_value('version')}")
 
             try:
                 self.presence = Presence(self.config)
                 Startup.clear_line()
-            except Exception:
+            except Exception as e:
                 traceback.print_exc()
+                raise Exception(f"Error occurred when initializing: {e}")
+
+            if not Processes.are_processes_running():
+                color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
+                self.start_game()
 
             if Localizer.get_config_value("region",0) == "": # try to autodetect region on first launch
                 self.check_region()
@@ -67,27 +69,23 @@ class Startup:
         self.presence.update_presence("startup")
         Checker.check_version(self.config)
 
-        if not Processes.are_processes_running():
-            color_print([("Red", Localizer.get_localized_text("prints","startup","starting_valorant"))])
-            self.start_game()
-        
         self.setup_client()
 
         self.systray = Systray(self.client,self.config)
         self.dispatch_systray()
-        
+
         if self.client.fetch_presence() is None:
             self.wait_for_presence()
 
         self.dispatch_presence()
-        
+
         color_print([("LimeGreen",f"{Localizer.get_localized_text('prints','startup','startup_successful')}\n")])
         time.sleep(5)
         user32.ShowWindow(hWnd, 0) #hide window
 
         self.systray_thread.join()
         self.presence_thread.stop()
-        
+
     def dispatch_presence(self):
         self.presence_thread = Thread(target=self.presence.init_loop,daemon=True)
         self.presence_thread.start()
@@ -106,14 +104,16 @@ class Startup:
 
     def wait_for_presence(self):
         presence_timeout = Localizer.get_config_value("startup","presence_timeout")
-        presence_timer = 0 
+        presence_timer = 0
         print()
         while self.client.fetch_presence() is None:
             Startup.clear_line()
             color_print([("Cyan", "["),("White",f"{presence_timer}"),("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_presence')}")])
             presence_timer += 1
             if presence_timer >= presence_timeout:
-                self.systray.exit()
+                Logger.debug("Timed out waiting for presence!")
+                if self.systray is not None:
+                    self.systray.exit()
                 os._exit(1)
             time.sleep(1)
         Startup.clear_line()
@@ -121,17 +121,26 @@ class Startup:
 
     def start_game(self):
         path = Riot_Client_Services.get_rcs_path()
-        launch_timeout = Localizer.get_config_value("startup","game_launch_timeout")
-        launch_timer = 0
-
         psutil.subprocess.Popen([path, "--launch-product=valorant", "--launch-patchline=live"])
         print()
+
+        launch_timer = 0
+        launch_timeout = Localizer.get_config_value("startup","game_launch_timeout")
+        update_time = Localizer.get_config_value("startup","check_if_updating_time")
         while not Processes.are_processes_running():
             Startup.clear_line()
+
             color_print([("Cyan", "["),("White",f"{launch_timer}"),("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_valorant')}")])
             launch_timer += 1
+            if launch_timer == update_time:
+                if Processes.is_updating():
+                    Startup.clear_line()
+                    self.presence.ystr_client.update_status("Updating") # patching the game
+                    input(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Press {Fore.MAGENTA}Enter{Fore.YELLOW} when you're finished and have launched the game...")
             if launch_timer >= launch_timeout:
-                self.systray.exit()
+                Logger.debug("Timed out waiting for game!")
+                if self.systray is not None:
+                    self.systray.exit()
                 os._exit(1)
             time.sleep(1)
 
@@ -156,5 +165,4 @@ class Startup:
 
     @staticmethod
     def clear_line():
-        sys.stdout.write("\033[F") # move cursor up one line
-        sys.stdout.write("\r\033[K")
+        sys.stdout.write(f"{Cursor.UP()}\r{clear_line()}")

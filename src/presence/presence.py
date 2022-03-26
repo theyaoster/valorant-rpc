@@ -1,11 +1,10 @@
 from InquirerPy.utils import color_print
-import time, sys, traceback, os, ctypes, asyncio, json, base64, ssl, requests, http.client
+import time, traceback, os, ctypes, asyncio, ssl
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
-from ..utilities.config.app_config import Config
 from ..content.content_loader import Loader
 from ..localization.localization import Localizer
 from .presences import (ingame,menu,startup,pregame)
@@ -25,34 +24,14 @@ class Presence:
         self.content_data = {}
     
     def main_loop(self):
-        # async with websockets.connect(f'wss://riot:{self.client.lockfile["password"]}@localhost:{self.client.lockfile["port"]}', ssl=ssl_context) as websocket:
-        #     await websocket.send('[5, "OnJsonApiEvent_chat_v4_presences"]')    # subscribing to presence event
-            
-        #     while True:
-        #         response = await websocket.recv()
-        #         if response != "":
-        #             response = json.loads(response)
-        #             if response[2]['data']['presences'][0]['puuid'] == self.client.puuid:
-        #                 presence_data = json.loads(base64.b64decode((response[2]['data']['presences'][0]['private'])))
-        #                 if presence_data is not None:
-        #                     self.update_presence(presence_data["sessionLoopState"],presence_data)
-        #                     # print(presence_data)
-        #                 else:
-        #                     os._exit(1)
-
-        #                 if Localizer.locale != self.saved_locale:
-        #                     self.saved_locale = Localizer.locale
-        #                     self.content_data = Loader.load_all_content(self.client)
-
-
         while True:
             presence_data = None
             try:
                 presence_data = self.client.fetch_presence()
-            except http.client.RemoteDisconnected: # If the game is closed
+            except Exception: # If the game is closed
                 self.ystr_client.offline()
                 os._exit(1)
-            
+
             if presence_data is not None:
                 self.update_presence(presence_data["sessionLoopState"],presence_data)
             else:
@@ -77,7 +56,6 @@ class Presence:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            #asyncio.ensure_future(self.main_loop())
             self.main_loop()
 
         except Exception as e:

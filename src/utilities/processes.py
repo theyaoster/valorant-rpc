@@ -8,7 +8,7 @@ class Processes:
         processes = []
         for proc in psutil.process_iter():
             processes.append(proc.name())
-        
+
         return set(required_processes).issubset(processes)
 
     @staticmethod
@@ -21,3 +21,10 @@ class Processes:
             return True
 
         return False
+
+    @staticmethod
+    def is_updating():
+        processes = []
+        for proc in psutil.process_iter():
+            processes.append(proc.name())
+        return set(["RiotClientUx.exe", "RiotClientUxRender.exe"]).issubset(processes)

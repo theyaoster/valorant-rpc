@@ -1,5 +1,6 @@
 import json, os
-from valclient.client import Client 
+from colorama import Fore, Style
+from valclient.client import Client
 
 from ..filepath import Filepath
 
@@ -7,10 +8,10 @@ from ...localization.locales import Locales
 from ...localization.localization import Localizer
 from ..logging import Logger
 
-PLACEHOLDER_VALUE = f"THIS IS A PLACEHOLDER"
+PLACEHOLDER_VALUE = "THIS IS A PLACEHOLDER"
 
 default_config = {
-    "version": "v0.1.1",
+    "version": "v0.1.2",
     "region": ["",Client.fetch_regions()],
     "client_id": 811469787657928704,
     "presence_refresh_interval": 3,
@@ -30,7 +31,8 @@ default_config = {
         }
     },
     "startup": {
-        "game_launch_timeout": 50,
+        "game_launch_timeout": 60,
+        "check_if_updating_time": 15,
         "presence_timeout": 60,
         "show_github_link": False,
         "auto_launch_skincli": False,
@@ -50,13 +52,14 @@ class Config:
         if not os.path.isfile(config_path):
             os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
             Config.modify_config(default_config) # write default config
-            print(f"Generated default config at {config_path} since no config.json currently exists. Modify the config values that are placeholders (in the file that just opened), then hit enter in this window to proceed.")
-            print()
+            print(f"Generated default config at {Fore.BLUE}{config_path}")
+            print(f"{Style.BRIGHT}{Fore.YELLOW}Modify the 3 placeholder values in the config file before you proceed.\n")
+
             os.startfile(config_path) # open config file in default editor
 
             typed = None
             while typed != "done":
-                typed = input("Type \"done\" to proceed once you've updated the config values... ")
+                typed = input(f"Type \"{Style.BRIGHT}{Fore.MAGENTA}done{Style.RESET_ALL}\" once you've updated the config values... ")
 
         try:
             with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))) as f:
@@ -79,7 +82,7 @@ class Config:
         # i bet theres a way better way to write this but im just braindead
         config = Config.fetch_config()
         unlocalized_config = Config.localize_config(config,True)
-        
+
         def check_for_new_vars(blank,current):
             for key,value in blank.items():
                 if not key in current.keys():
@@ -87,10 +90,10 @@ class Config:
                 if type(value) != type(current[key]):
                     # if type of option is changed
                     current[key] = value
-                if key == "version": 
+                if key == "version":
                     # version can't be changed by the user lmao
                     current[key] = value
-                if key == "region": 
+                if key == "region":
                     current[key][1] = Client.fetch_regions() # update regions jic ya know
                 if isinstance(value,list):
                     current[key][0] = current[key][0]
@@ -100,7 +103,7 @@ class Config:
                 if isinstance(value,dict):
                     check_for_new_vars(value,current[key])
             return current
-            
+
         def remove_unused_vars(blank,current):
             def check(bl,cur):
                 for key,value in list(cur.items()):
@@ -129,7 +132,6 @@ class Config:
                         current[new_key] = current[key]
                         del current[key]
                     else:
-                        #print(current[key])
                         current[new_key] = current[key]
                         del current[key]
 
@@ -144,7 +146,7 @@ class Config:
                         unlocalized = Localizer.unlocalize_key(current[new_key][0])
                         value[0] = unlocalized
                         value[1] = new_options
-                
+
                 if isinstance(value,dict):
                     check(value,current[new_key])
 

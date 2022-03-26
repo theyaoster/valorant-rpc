@@ -28,7 +28,6 @@ class Systray:
         systray_menu = menu(
             item('show window', Systray.tray_window_toggle, checked=lambda item: window_shown),
             item('config', Systray.modify_config),
-            #item('copy join link', self.copy_join_link),
             item('reload', Systray.restart),
             item('exit', self.exit)
         )
@@ -43,14 +42,11 @@ class Systray:
         except:
             pass
 
-    def copy_join_link(self):
-        pyperclip.copy(Utilities.get_join_state(self.client,self.config)[0]["url"])
-
     @staticmethod
     def generate_icon():
-        urllib.request.urlretrieve('https://raw.githubusercontent.com/theyaoster/valorant-rpc/v2/favicon.ico',Filepath.get_path(os.path.join(Filepath.get_appdata_folder(),'favicon.ico')))
+        urllib.request.urlretrieve('https://raw.githubusercontent.com/theyaoster/valorant-ystr/v2/favicon.ico',Filepath.get_path(os.path.join(Filepath.get_appdata_folder(),'favicon.ico')))
 
-    @staticmethod 
+    @staticmethod
     def modify_config():
         user32.ShowWindow(hWnd, 1)
         Config_Editor()
@@ -63,10 +59,10 @@ class Systray:
     def restart():
         user32.ShowWindow(hWnd, 1)
         os.system('cls' if os.name == 'nt' else 'clear')
-        os.execl(sys.executable, os.path.abspath(__file__), *sys.argv) 
+        os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
 
     @staticmethod
-    def tray_window_toggle(icon,item):
+    def tray_window_toggle(item):
         global window_shown
         try:
             window_shown = not item.checked
@@ -75,4 +71,4 @@ class Systray:
             else:
                 user32.ShowWindow(hWnd, 0)
         except Exception as e:
-            pass # oh no! bad python practices! 
+            pass # oh no! bad python practices!

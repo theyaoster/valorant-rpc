@@ -12,11 +12,11 @@ VSVersionInfo(
         StringFileInfo([StringTable(
             u'040904B0',
             [StringStruct(u'CompanyName', u'Brian Yao'),
-             StringStruct(u'FileDescription', u'A fork of Colin Hartigan\'s rpc, adapted to publish to a web service.'),
-             StringStruct(u'FileVersion', u'3.0'),
+             StringStruct(u'FileDescription', u'VALORANT-ystr'),
+             StringStruct(u'FileVersion', u'1.0'),
              StringStruct(u'InternalName', u'valorantystr'),
              StringStruct(u'LegalCopyright', u'Brian Yao'),
              StringStruct(u'OriginalFilename', u'VALORANT-ystr.exe'),
              StringStruct(u'ProductName', u'VALORANT-ystr'),
-             StringStruct(u'ProductVersion', u'0.1.0')])]),
+             StringStruct(u'ProductVersion', u'0.1.2')])]),
         VarFileInfo([VarStruct(u'Translation', [1033, 1200])])])

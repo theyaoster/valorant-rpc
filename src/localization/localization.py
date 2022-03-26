@@ -1,4 +1,5 @@
 from InquirerPy import inquirer
+from colorama import Style
 from .locales import Locales
 
 class Localizer:
@@ -67,12 +68,13 @@ class Localizer:
         locale = config["locale"]
         current = locale[0]
         options = locale[1]
+        print(Style.BRIGHT)
         choice = inquirer.select(
-            message=f"select your locale (language)",
+            message="Select your locale (language):",
             default=current,
             choices={option:option for option in options},
             pointer=">"
         )
         choice = choice.execute()
-        locale[0] = choice 
+        locale[0] = choice
         return config
