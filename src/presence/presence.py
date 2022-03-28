@@ -1,8 +1,9 @@
 from InquirerPy.utils import color_print
 from valclient.exceptions import PhaseError
-import time, traceback, os, ctypes, ssl
+import time, os, ssl
 
 from .presence_utilities import Utilities
+from ..utilities.error_handling import handle_error
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.check_hostname = False
@@ -12,10 +13,6 @@ from ..content.content_loader import Loader
 from ..localization.localization import Localizer
 from ..utilities.logging import Logger
 from ..utilities.ystr_client import YstrClient
-
-kernel32 = ctypes.WinDLL('kernel32')
-user32 = ctypes.WinDLL('user32')
-hWnd = kernel32.GetConsoleWindow()
 
 class Presence:
 
@@ -29,17 +26,7 @@ class Presence:
 
     def main_loop(self):
         while True:
-            try:
-                presence_data = self.client.fetch_presence()
-            except Exception as e:
-                # Presence unexpectedly stopped
-                self.kill_presence_thread(f"Exiting due to error while fetching presence: {e}")
-
-            if presence_data is not None:
-                self.update_if_status_changed()
-            else:
-                # Presence data is empty...
-                self.kill_presence_thread(f"Presence data was blank - assuming game was closed. Exiting.")
+            self.update_if_status_changed()
 
             if Localizer.locale != self.saved_locale:
                 self.saved_locale = Localizer.locale
@@ -55,25 +42,42 @@ class Presence:
 
             self.main_loop()
         except Exception:
-            user32.ShowWindow(hWnd, 1)
-            kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), (0x4|0x80|0x20|0x2|0x10|0x1|0x40|0x100))
-            color_print([("Red bold",Localizer.get_localized_text("prints","errors","error_message"))])
-            traceback.print_exc()
-            input(Localizer.get_localized_text("prints","errors","exit"))
+            handle_error()
             self.kill_presence_thread()
 
+    # Only update status if a change is detected - this reduces network usage
+    def update_if_status_changed(self, status_override=None):
+        last_status = self.current_status
+        live_status = status_override
+        if status_override is None:
+            try:
+                presence_data = self.client.fetch_presence()
+            except Exception as e:
+                # Presence unexpectedly stopped
+                self.kill_presence_thread(f"Exiting due to error while fetching presence: {e}")
+
+            if presence_data is not None:
+                live_status = self.get_status(presence_data)
+            else:
+                # Presence data is empty...
+                self.kill_presence_thread(f"Presence data was blank - assuming game was closed. Exiting.")
+        if last_status != live_status and live_status is not None:
+            self.ystr_client.update_status(live_status)
+            self.current_status = live_status
+
     # Get the status of a player
-    def get_status(self, status_type, data=None):
-        if data and data["isIdle"]:
-            return self.get_afk_status(data, self.content_data)
-        if status_type == "startup":
+    def get_status(self, presence_data=None):
+        status_type = presence_data["sessionLoopState"]
+        if presence_data["isIdle"]:
+            return self.get_afk_status(presence_data, self.content_data)
+        elif status_type == "startup":
             return self.get_startup_status()
         elif status_type == "MENUS":
-            return self.get_menu_status(data, self.content_data)
+            return self.get_menu_status(presence_data, self.content_data)
         elif status_type == "PREGAME":
-            return self.get_pregame_status(data, self.content_data)
+            return self.get_pregame_status(presence_data, self.content_data)
         elif status_type == "INGAME":
-            return self.get_ingame_status(data, self.content_data)
+            return self.get_ingame_status(presence_data, self.content_data)
         else:
             # Unknown status type
             Logger.debug(f"Unknown status type: {status_type}")
@@ -130,17 +134,6 @@ class Presence:
     def get_afk_status(self, data, content_data):
         _, mode_name = Utilities.fetch_mode_data(data, content_data)
         return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'away')} {Utilities.get_party_status(data)}"
-
-    # Only update status if a change is detected - this reduces network usage
-    def update_if_status_changed(self, status_override=None):
-        last_status = self.current_status
-        live_status = status_override
-        if status_override is None:
-            presence_data = self.client.fetch_presence()
-            live_status = self.get_status(presence_data["sessionLoopState"], presence_data)
-        if last_status != live_status and live_status is not None:
-            self.ystr_client.update_status(live_status)
-            self.current_status = live_status
 
     # Helper for killing this thread while notifying the user and the web service
     def kill_presence_thread(self, message=""):

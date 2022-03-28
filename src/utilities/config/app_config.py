@@ -1,4 +1,4 @@
-import json, os
+import json, os, copy
 from colorama import Fore, Style
 from valclient.client import Client
 
@@ -51,15 +51,14 @@ class Config:
         # Handle first-time startup when config file doesn't exist
         if not os.path.isfile(config_path):
             os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
-            Config.modify_config(default_config) # write default config
-            print(f"Generated default config at {Fore.BLUE}{config_path}")
-            print(f"{Style.BRIGHT}{Fore.YELLOW}Modify the 3 placeholder values in the config file before you proceed.\n")
+            print(f"{Fore.YELLOW}As this is the first time you're launching this, you'll need to enter the following required configs.\n")
 
-            os.startfile(config_path) # open config file in default editor
-
-            typed = None
-            while typed != "done":
-                typed = input(f"Type \"{Style.BRIGHT}{Fore.MAGENTA}done{Style.RESET_ALL}\" once you've updated the config values... ")
+            initial_config = copy.deepcopy(default_config)
+            initial_config["name"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered name: ").strip()
+            initial_config["secret"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
+            initial_config["endpoint"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter the web endpoint you wish to reach: ").strip()
+            Config.modify_config(initial_config)
+            return initial_config
 
         try:
             with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))) as f:
