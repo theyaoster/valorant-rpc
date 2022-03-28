@@ -1,7 +1,6 @@
 import iso8601
 from ..utilities.logging import Logger
 from ..localization.localization import Localizer
-debug = Logger.debug
 
 class Utilities:
 

@@ -27,7 +27,9 @@ class YstrClient:
     def put(self, path, headers, payload):
         try:
             response = requests.put(f"{self.endpoint}/{path}", headers=headers, json=payload)
-            Logger.debug(f"Request headers: {response.request.headers}, body: {response.request.body}")
+            logged_body = payload
+            logged_body["secret"] = "REDACTED"
+            Logger.debug(f"Request body: {logged_body}")
             Logger.debug(f"Got response: {response.content} with status code {response.status_code}. Headers: {response.headers}")
             return response
         except ConnectionError as e:

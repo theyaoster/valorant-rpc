@@ -66,7 +66,7 @@ class Startup:
 
 
     def run(self):
-        self.presence.update_presence("startup")
+        self.presence.update_if_status_changed("Loading")
         Checker.check_version(self.config)
 
         self.setup_client()
@@ -80,8 +80,8 @@ class Startup:
         self.dispatch_presence()
 
         color_print([("LimeGreen",f"{Localizer.get_localized_text('prints','startup','startup_successful')}\n")])
-        time.sleep(5)
-        user32.ShowWindow(hWnd, 0) #hide window
+        # time.sleep(5)
+        # user32.ShowWindow(hWnd, 0) #hide window
 
         self.systray_thread.join()
         self.presence_thread.stop()
@@ -135,7 +135,7 @@ class Startup:
             if launch_timer == update_time:
                 if Processes.is_updating():
                     Startup.clear_line()
-                    self.presence.ystr_client.update_status("Updating") # patching the game
+                    self.presence.update_if_status_changed("Updating") # patching the game
                     input(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Press {Fore.MAGENTA}Enter{Fore.YELLOW} when you're finished and have launched the game...")
             if launch_timer >= launch_timeout:
                 Logger.debug("Timed out waiting for game!")
