@@ -1,29 +1,28 @@
 from InquirerPy.utils import color_print
 from InquirerPy import inquirer
-from valclient.client import Client
 
 from .app_config import Config
 from ...localization.localization import Localizer
 
+MAIN_SECTION = "main"
+BACK_VALUE = "back"
+UNMODIFIABLE = ["version", "presence_refresh_interval", "startup"]
 
-class Config_Editor:
-
-    # my friends made me listen to alvin and the chipmunks music
-    # while writing this so i apologize for how poorly its written
+class ConfigEditor:
 
     def __init__(self):
         self.config = Config.fetch_config()
 
-        self.config_menu("main", self.config)
+        self.config_menu(MAIN_SECTION, self.config)
 
     def config_menu(self, section, choices, callback=None, callback_args=None):
-        # recursion makes me want to die but its for a good cause
+        prompt_choices = [{ "name": "Go Back" if section != MAIN_SECTION else "Save Settings", "value": BACK_VALUE }]
 
-        prompt_choices = [
-            {"name": f"{setting}" + ( f" ({value[0]})" if isinstance(value, list) else f" ({value})" if not isinstance(value, dict) else " (>>)"), "value": setting} for
-            setting, value in choices.items()
-        ]
-        prompt_choices.insert(0, {"name": "back" if section != "main" else "done", "value": "back"} )
+        for setting, value in choices.items():
+            if setting in UNMODIFIABLE:
+                continue
+            setting_value = f" ([{value[0]}...])" if isinstance(value, list) else f" ({value})" if not isinstance(value, dict) else " (\{...\})"
+            prompt_choices.append({ "name": setting + setting_value, "value": setting })
 
         choice = inquirer.select(
             message=f"[{section}] {Localizer.get_localized_text('prints','config_modification','select_option')}",
@@ -32,20 +31,18 @@ class Config_Editor:
         )
         choice = choice.execute()
 
-        if choice == "back":
-            if section != "main":
+        if choice == BACK_VALUE:
+            if section != MAIN_SECTION:
                 callback(*callback_args)
             elif callback is None:
                 Config.modify_config(self.config)
                 color_print([("LimeGreen", Localizer.get_localized_text("prints","config_modification","config_saved"))])
-                return
         else:
             if isinstance(choices[choice], dict):
                 self.config_menu(choice, choices[choice], callback=self.config_menu,callback_args=(section, choices, callback, callback_args))
             else:
-                if choice == Localizer.get_config_key("locale"): 
-                    #translate config
-                    old_locale = choices[choice]
+                if choice == Localizer.get_config_key("locale"):
+                    # translate config
                     new_locale = self.config_set(choice, choices[choice])[0]
                     self.config = Config.localize_config(self.config,True)
                     self.config["locale"][0] = new_locale
@@ -100,5 +97,5 @@ class Config_Editor:
                 pointer=">"
             )
             choice = choice.execute()
-            option[0] = choice 
+            option[0] = choice
             return option

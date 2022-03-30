@@ -8,34 +8,20 @@ from ...localization.locales import Locales
 from ...localization.localization import Localizer
 from ..logging import Logger
 
+CONFIG_FILENAME = "config.json"
+CONFIG_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), CONFIG_FILENAME))
+
 PLACEHOLDER_VALUE = "THIS IS A PLACEHOLDER"
 
 default_config = {
     "version": "v0.1.2",
-    "region": ["",Client.fetch_regions()],
-    "client_id": 811469787657928704,
+    "region": ["", Client.fetch_regions()],
     "presence_refresh_interval": 3,
-    "locale": ["",[locale for locale,data in Locales.items() if data != {}]],
-    "presences": {
-        "menu": {
-            "show_rank_in_comp_lobby": True,
-        },
-        "modes": {
-            "all": {
-                "small_image": ["agent",["rank","agent","map"]],
-                "large_image": ["map",["rank","agent","map"]],
-            },
-            "range": {
-                "show_rank_in_range": False,
-            }
-        }
-    },
+    "locale": ["", [locale for locale, data in Locales.items() if data != {}]],
     "startup": {
         "game_launch_timeout": 60,
-        "check_if_updating_time": 15,
         "presence_timeout": 60,
-        "show_github_link": False,
-        "auto_launch_skincli": False,
+        "check_if_updating_time": 15,
     },
     "endpoint": PLACEHOLDER_VALUE, # Adding these here so they aren't autodeleted upon launch
     "name": PLACEHOLDER_VALUE,
@@ -46,22 +32,23 @@ class Config:
 
     @staticmethod
     def fetch_config():
-        config_path = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))
-
         # Handle first-time startup when config file doesn't exist
-        if not os.path.isfile(config_path):
+        if not os.path.isfile(CONFIG_FILEPATH):
             os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
             print(f"{Fore.YELLOW}As this is the first time you're launching this, you'll need to enter the following required configs.\n")
 
+            # Prompt user for required configs
             initial_config = copy.deepcopy(default_config)
             initial_config["name"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered name: ").strip()
             initial_config["secret"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
             initial_config["endpoint"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter the web endpoint you wish to reach: ").strip()
+
+            # Save inputs to disk
             Config.modify_config(initial_config)
             return initial_config
 
         try:
-            with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json"))) as f:
+            with open(CONFIG_FILEPATH) as f:
                 config = json.load(f)
                 return config
         except Exception as e:
@@ -69,7 +56,7 @@ class Config:
 
     @staticmethod
     def modify_config(new_config):
-        with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json")), "w") as f:
+        with open(CONFIG_FILEPATH, "w") as f:
             json.dump(new_config, f)
 
         return Config.fetch_config()
@@ -151,11 +138,3 @@ class Config:
 
         check(default_config,config)
         return config
-
-    @staticmethod
-    def create_default_config():
-        if not os.path.exists(Filepath.get_appdata_folder()):
-            os.mkdir(Filepath.get_appdata_folder())
-        with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), "config.json")), "w") as f:
-            json.dump(default_config, f)
-        return Config.fetch_config()

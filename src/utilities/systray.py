@@ -1,72 +1,65 @@
 from PIL import Image
-from pystray import Icon as icon, Menu as menu, MenuItem as item
+from pystray import Icon, Menu, MenuItem
 import ctypes, os, urllib.request, sys, time
 from InquirerPy.utils import color_print
 
-from .error_handling import handle_error
-
 from .filepath import Filepath
-from .config.modify_config import Config_Editor
+from .config.modify_config import ConfigEditor
 from ..localization.localization import Localizer
 from ..presence.presence_utilities import Utilities
 
-kernel32 = ctypes.WinDLL('kernel32')
-user32 = ctypes.WinDLL('user32')
-hWnd = kernel32.GetConsoleWindow()
-
-window_shown = False
+ICON_URI = "https://raw.githubusercontent.com/theyaoster/valorant-ystr/master/favicon.ico"
+ICON_FILENAME = "favicon.ico"
+ICON_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), ICON_FILENAME))
 
 class Systray:
 
     def __init__(self, client, config):
         self.client = client
         self.config = config
+        self.user = ctypes.WinDLL('user32')
+        self.kernel = ctypes.WinDLL('kernel32')
+        self.window = self.kernel.GetConsoleWindow()
+        self.visible = False
 
     def run(self):
-        global window_shown
-        Systray.generate_icon()
-        systray_image = Image.open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), 'favicon.ico')))
-        systray_menu = menu(
-            item('Show Window', Systray.tray_window_toggle, checked=lambda _: window_shown),
-            item('Edit Settings', Systray.modify_config),
-            item('Restart', Systray.restart),
-            item('Exit', self.exit)
+        self.generate_icon()
+        systray_image = Image.open(ICON_FILEPATH)
+        systray_menu = Menu(
+            MenuItem('Show Window', self.tray_window_toggle, checked=lambda _: self.visible),
+            MenuItem('Edit Settings', self.modify_config),
+            MenuItem('Restart', self.restart),
+            MenuItem('Exit', self.exit)
         )
-        self.systray = icon("VALORANT-ystr", systray_image, "VALORANT-ystr", systray_menu)
+        self.systray = Icon("VALORANT-ystr", systray_image, "VALORANT-ystr", systray_menu)
         self.systray.run()
 
     def exit(self):
-        self.systray.visible = False
         self.systray.stop()
         os._exit(1)
 
-    @staticmethod
-    def generate_icon():
-        urllib.request.urlretrieve('https://raw.githubusercontent.com/theyaoster/valorant-ystr/v2/favicon.ico',Filepath.get_path(os.path.join(Filepath.get_appdata_folder(),'favicon.ico')))
+    def generate_icon(self):
+        urllib.request.urlretrieve(ICON_URI, ICON_FILEPATH)
 
-    @staticmethod
-    def modify_config():
-        user32.ShowWindow(hWnd, 1)
-        Config_Editor()
-        if not window_shown:
-            color_print([("LimeGreen",f"{Localizer.get_localized_text('prints','systray','hiding_window')}\n")])
-            time.sleep(1)
-            user32.ShowWindow(hWnd, 0)
+    def modify_config(self):
+        self.show()
+        ConfigEditor()
+        if not self.visible:
+            color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'systray', 'hiding_window')}\n")])
+            time.sleep(5)
+            self.hide()
 
-    @staticmethod
-    def restart():
-        user32.ShowWindow(hWnd, 1)
+    def restart(self):
+        self.user.ShowWindow(self.window, 1)
         os.system('cls' if os.name == 'nt' else 'clear')
         os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
 
-    @staticmethod
-    def tray_window_toggle(wrapper):
-        global window_shown
-        try:
-            window_shown = not wrapper()
-            if window_shown:
-                user32.ShowWindow(hWnd, 1)
-            else:
-                user32.ShowWindow(hWnd, 0)
-        except Exception:
-            handle_error()
+    def tray_window_toggle(self):
+        self.visible = not self.visible
+        self.user.ShowWindow(self.window, int(self.visible))
+
+    def show(self):
+        self.user.ShowWindow(self.window, 1)
+
+    def hide(self):
+        self.user.ShowWindow(self.window, 0)

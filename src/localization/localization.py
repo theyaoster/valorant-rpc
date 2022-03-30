@@ -1,5 +1,8 @@
 from InquirerPy import inquirer
+from InquirerPy.utils import color_print
 from colorama import Style
+import valclient
+
 from .locales import Locales
 
 class Localizer:
@@ -32,7 +35,6 @@ class Localizer:
     def get_config_key(key):
         try:
             for k,value in Locales[Localizer.locale]["config"].items():
-                #print(f"{k}/{value}")
                 if k == key:
                     return value
             return key
@@ -42,7 +44,6 @@ class Localizer:
     @staticmethod
     def unlocalize_key(key):
         for k,value in Locales[Localizer.locale]["config"].items():
-            #print(f"{k}/{value}")
             if value == key:
                 return k
         return key
@@ -57,7 +58,7 @@ class Localizer:
 
     @staticmethod
     def set_locale(config):
-        for locale,data in Locales.items():
+        for _, data in Locales.items():
             if data != {}:
                 for key,value in data["config"].items():
                     if key == "locale" and value in config.keys():
@@ -78,3 +79,22 @@ class Localizer:
         choice = choice.execute()
         locale[0] = choice
         return config
+
+    @staticmethod
+    def autodetect_region(config):
+        # If the region is not specified in the config, try to autodetect it (this happens on first launch)
+        if Localizer.get_config_value("region", 0) == "":
+            color_print([("Red bold", Localizer.get_localized_text("prints", "startup", "autodetect_region"))])
+
+            # Default to NA for now
+            client = valclient.Client()
+            client.activate()
+
+            # Find the valorant game session and fetch its region
+            sessions = client.riotclient_session_fetch_sessions()
+            val_session = next(session for _, session in sessions.items() if session["productId"] == "valorant")
+            region = next(arg.split("=", 2)[1] for arg in val_session["launchConfiguration"]["arguments"] if "-ares-deployment" in arg) # The value of the ares-deployment arg is the region
+
+            # Update the config to specify the detected region
+            config[Localizer.get_config_key("region")][0] = region
+            color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'autodetected_region')} {Localizer.get_config_value('region', 0)}")])

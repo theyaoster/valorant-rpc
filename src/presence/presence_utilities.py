@@ -1,4 +1,3 @@
-import iso8601
 from ..utilities.logging import Logger
 from ..localization.localization import Localizer
 
@@ -20,31 +19,20 @@ class Utilities:
                 party_size[1] = 1
         return party_state, party_size
 
-    @staticmethod
-    def iso8601_to_epoch(time):
-        if time == "0001.01.01-00.00.00":
-            return None
-        split = time.split("-")
-        split[0] = split[0].replace(".","-")
-        split[1] = split[1].replace(".",":")
-        split = "T".join(i for i in split)
-        split = iso8601.parse_date(split).timestamp() #converts iso8601 to epoch
-        return split
+    # @staticmethod
+    # def fetch_rank_data(client,content_data):
+    #     try:
+    #         mmr = client.fetch_mmr()["QueueSkills"]["competitive"]["SeasonalInfoBySeasonID"][content_data["season"]["season_uuid"]]
+    #     except:
+    #         return "rank_0","Rank not found"
+    #     rank_data = {}
+    #     for tier in content_data["comp_tiers"]:
+    #         if tier["id"] == mmr["CompetitiveTier"]:
+    #             rank_data = tier
+    #     rank_image = f"rank_{rank_data['id']}"
+    #     rank_text = f"{rank_data['display_name_localized']} - {mmr['RankedRating']}{Localizer.get_localized_text('presences','leveling','ranked_rating')}" + (f" // #{mmr['LeaderboardRank']}" if mmr['LeaderboardRank'] != 0 else "")
 
-    @staticmethod
-    def fetch_rank_data(client,content_data):
-        try:
-            mmr = client.fetch_mmr()["QueueSkills"]["competitive"]["SeasonalInfoBySeasonID"][content_data["season"]["season_uuid"]]
-        except:
-            return "rank_0","Rank not found"
-        rank_data = {}
-        for tier in content_data["comp_tiers"]:
-            if tier["id"] == mmr["CompetitiveTier"]:
-                rank_data = tier
-        rank_image = f"rank_{rank_data['id']}"
-        rank_text = f"{rank_data['display_name_localized']} - {mmr['RankedRating']}{Localizer.get_localized_text('presences','leveling','ranked_rating')}" + (f" // #{mmr['LeaderboardRank']}" if mmr['LeaderboardRank'] != 0 else "")
-
-        return rank_image, rank_text
+    #     return rank_image, rank_text
 
     @staticmethod
     def fetch_map_data(coregame_data,content_data):
@@ -53,14 +41,14 @@ class Utilities:
                 return gmap["display_name"], gmap["display_name_localized"]
         return "", ""
 
-    @staticmethod
-    def fetch_agent_data(uuid,content_data):
-        for agent in content_data["agents"]:
-            if agent["uuid"] == uuid:
-                agent_image = f"agent_{agent['display_name'].lower().replace('/','')}"
-                agent_name = agent['display_name_localized']
-                return agent_image, agent_name
-        return "rank_0","?"
+    # @staticmethod
+    # def fetch_agent_data(uuid,content_data):
+    #     for agent in content_data["agents"]:
+    #         if agent["uuid"] == uuid:
+    #             agent_image = f"agent_{agent['display_name'].lower().replace('/','')}"
+    #             agent_name = agent['display_name_localized']
+    #             return agent_image, agent_name
+    #     return "rank_0","?"
 
     @staticmethod
     def fetch_mode_data(data, content_data):
@@ -74,16 +62,6 @@ class Utilities:
 
         mode_name = Utilities.localize_content_name(mode_name, "presences", "modes", data["queueId"])
         return image,mode_name
-
-    @staticmethod
-    def get_content_preferences(client,pref,presence,player_data,coregame_data,content_data):
-        if pref == Localizer.get_localized_text("config", "rank"):
-            return Utilities.fetch_rank_data(client,content_data)
-        if pref == Localizer.get_localized_text("config", "map"):
-            gmap = Utilities.fetch_map_data(coregame_data,content_data)
-            return f"splash_{gmap[0].lower()}", gmap[1]
-        if pref == Localizer.get_localized_text("config", "agent"):
-            return Utilities.fetch_agent_data(player_data["CharacterID"],content_data)
 
     @staticmethod
     def localize_content_name(default,*keys):

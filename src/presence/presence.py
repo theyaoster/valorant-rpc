@@ -1,16 +1,12 @@
-from InquirerPy.utils import color_print
 from valclient.exceptions import PhaseError
-import time, os, ssl
+import time, os
 
 from .presence_utilities import Utilities
-from ..utilities.error_handling import handle_error
-
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
 
 from ..content.content_loader import Loader
 from ..localization.localization import Localizer
+from ..utilities.error_handling import handle_error
+from ..utilities.killable_thread import KillableThread
 from ..utilities.logging import Logger
 from ..utilities.ystr_client import YstrClient
 
@@ -19,28 +15,23 @@ class Presence:
     def __init__(self, config):
         self.config = config
         self.client = None
-        self.saved_locale = None
         self.ystr_client = YstrClient(self.config)
         self.content_data = {}
         self.current_status = None
 
+    # Poll game presence
     def main_loop(self):
+        sleep_duration = int(Localizer.get_config_value("presence_refresh_interval"))
         while True:
             self.update_if_status_changed()
+            time.sleep(sleep_duration)
 
-            if Localizer.locale != self.saved_locale:
-                self.saved_locale = Localizer.locale
-                self.content_data = Loader.load_all_content(self.client)
-            time.sleep(Localizer.get_config_value("presence_refresh_interval"))
-
-    def init_loop(self):
+    # Start the thread to continuously poll game presence
+    def start_thread(self):
         try:
             self.content_data = Loader.load_all_content(self.client)
-            color_print([("LimeGreen bold", Localizer.get_localized_text("prints","presence","presence_running"))])
-
-            self.update_if_status_changed()
-
-            self.main_loop()
+            self.presence_thread = KillableThread(target=self.main_loop, daemon=True)
+            self.presence_thread.start()
         except Exception:
             handle_error()
             self.kill_presence_thread()
@@ -61,7 +52,8 @@ class Presence:
             else:
                 # Presence data is empty...
                 self.kill_presence_thread(f"Presence data was blank - assuming game was closed. Exiting.")
-        if last_status != live_status and live_status is not None:
+
+        if last_status != live_status and live_status is not None: # If live_status is None, something like a PhaseError occurred
             self.ystr_client.update_status(live_status)
             self.current_status = live_status
 

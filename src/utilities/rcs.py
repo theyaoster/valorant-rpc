@@ -1,8 +1,8 @@
 import os, json
 
-class Riot_Client_Services:
+class RiotClientServices:
 
-    @staticmethod 
+    @staticmethod
     def get_rcs_path():
         riot_installs_path = os.path.expandvars("%PROGRAMDATA%\\Riot Games\\RiotClientInstalls.json")
         try:
@@ -14,4 +14,3 @@ class Riot_Client_Services:
                 return rcs_path
         except FileNotFoundError:
             raise IOError(f"Could not find Riot Client Services install location at {riot_installs_path}!")
-    
