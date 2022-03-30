@@ -2,6 +2,7 @@ from InquirerPy.utils import color_print
 from colorama import Fore, Style, Cursor, ansi
 import psutil, time, cursor, valclient, ctypes, os, sys
 
+from .utilities.error_handling import handle_error
 from .utilities.killable_thread import KillableThread
 from .utilities.config.app_config import Config
 from .utilities.processes import Processes
@@ -19,8 +20,8 @@ user32 = ctypes.WinDLL('user32')
 kernel32 = ctypes.WinDLL('kernel32')
 window = kernel32.GetConsoleWindow()
 
-# Helper to clear out the current line of stdout
-def clear_current_line():
+# Helper to clear out the second-to-last line of stdout
+def clear_last_line():
     sys.stdout.write(f"{Cursor.UP()}\r{ansi.clear_line()}")
 
 class Startup:
@@ -44,7 +45,11 @@ class Startup:
             Checker.check_version(self.config)
 
             # Initialize http client
-            self.presence = Presence(self.config)
+            try:
+                self.presence = Presence(self.config)
+            except Exception as e:
+                handle_error(e)
+                os._exit(1)
 
             # Launch the game
             self.start_game()
@@ -79,9 +84,8 @@ class Startup:
     def wait_for_presence(self):
         presence_timeout = Localizer.get_config_value("startup", "presence_timeout")
         presence_timer = 0
-        print()
         while self.client.fetch_presence() is None:
-            clear_current_line()
+            clear_last_line()
             color_print([("Cyan", "["), ("White", str(presence_timer)), ("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_presence')}")])
 
             presence_timer += 1
@@ -93,8 +97,7 @@ class Startup:
 
             time.sleep(1) # Wait 1 second
 
-        clear_current_line()
-        clear_current_line()
+        clear_last_line()
 
     # Start VALORANT - this will return when the game process is detected
     def start_game(self):
@@ -113,7 +116,7 @@ class Startup:
         launch_timeout = Localizer.get_config_value("startup", "game_launch_timeout")
         update_time = Localizer.get_config_value("startup", "check_if_updating_time")
         while not Processes.are_processes_running():
-            clear_current_line()
+            clear_last_line()
 
             color_print([("Cyan", "["),("White",f"{launch_timer}"),("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_valorant')}")])
             launch_timer += 1
@@ -121,7 +124,7 @@ class Startup:
             # Check if game is updating
             if launch_timer == update_time:
                 if Processes.is_updating():
-                    clear_current_line()
+                    clear_last_line()
                     self.presence.update_if_status_changed("Updating") # patching the game
                     input(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Press {Fore.MAGENTA}Enter{Fore.YELLOW} when you're finished and have launched the game...")
                     launch_timer = 0
@@ -135,4 +138,4 @@ class Startup:
 
             time.sleep(1) # Wait 1 second
 
-        clear_current_line()
+        clear_last_line()

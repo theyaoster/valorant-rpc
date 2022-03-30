@@ -1,3 +1,4 @@
+from xmlrpc.client import ResponseError
 from valclient.exceptions import PhaseError
 import time, os
 
@@ -120,6 +121,9 @@ class Presence:
                     return f"{mode_name} - {my_score} to {other_score} {Utilities.get_party_status(data)}"
         except PhaseError as e:
             Logger.debug(f"Ran into PhaseError (in-game): {e}")
+            return None
+        except ResponseError as e:
+            Logger.debug(f"Rand into ResponseError (in-game): {e}")
             return None
 
     # Status string for AFK (Idle)

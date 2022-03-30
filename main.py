@@ -12,7 +12,7 @@ if __name__ == "__main__":
     color_print([("Tomato", f""" _  _  __    __    _____  ____    __    _  _  ____     _  _  ___  ____  ____
 ( \/ )/__\  (  )  (  _  )(  _ \  /__\  ( \( )(_  _)___( \/ )/ __)(_  _)(  _ \\
  \  //(__)\  )(__  )(_)(  )   / /(__)\  )  (   )( (___)\  / \__ \  )(   )   /
-  \/(__)(__)(____)(_____)(_)\_)(__)(__)(_)\_) (__)     (__) (___/ (__) (_)\_)   """), ("White", f"{default_config['version']}\n\n"), ("White", "Original code by colinhartigan.\n\n")])
+  \/(__)(__)(____)(_____)(_)\_)(__)(__)(_)\_) (__)     (__) (___/ (__) (_)\_)   """), ("White", f"{default_config['version']}\n\n"), ("White", "Original code by colinhartigan.\n")])
 
     try:
         ctypes.windll.kernel32.SetConsoleTitleW(f"VALORANT-ystr {default_config['version']}") # Set window title

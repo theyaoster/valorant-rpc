@@ -1,4 +1,4 @@
-import json, os, copy
+import json, os, copy, getpass
 from colorama import Fore, Style
 from valclient.client import Client
 
@@ -40,7 +40,7 @@ class Config:
             # Prompt user for required configs
             initial_config = copy.deepcopy(default_config)
             initial_config["name"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered name: ").strip()
-            initial_config["secret"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
+            initial_config["secret"] = getpass.getpass(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
             initial_config["endpoint"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter the web endpoint you wish to reach: ").strip()
 
             # Save inputs to disk
