@@ -1,20 +1,30 @@
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 from ..localization.localization import Localizer
+from ..utilities.logging import Logger
 
 class Loader:
 
-    @staticmethod 
-    def fetch(endpoint="/"):
-        data = requests.get(f"https://valorant-api.com/v1{endpoint}?language=all")
+    CONTENT_LOAD_TIMEOUT = 5 # Seconds
+    RETRY_STRATEGY = Retry(total=5, backoff_factor=1) # 5 max retries
+
+    @staticmethod
+    def fetch(session, endpoint="/"):
+        data = session.get(f"https://valorant-api.com/v1{endpoint}?language=all", timeout=Loader.CONTENT_LOAD_TIMEOUT)
         return data.json()
 
-    @staticmethod 
+    @staticmethod
     def load_all_content(client):
+        Logger.debug("Calling VALORANT API to load game content in memory...")
+
+        session = requests.Session()
+        session.mount("https://", HTTPAdapter(max_retries=Loader.RETRY_STRATEGY))
+
         content_data = {
             "agents": [],
             "maps": [],
-            "modes": [],   
+            "modes": [],
             "comp_tiers": [],
             "season": {},
             "queue_aliases": { #i'm so sad these have to be hardcoded but oh well :(
@@ -45,11 +55,11 @@ class Loader:
             "modes_with_icons": ["ggteam","onefa","snowball","spikerush","unrated","deathmatch"]
         }
         all_content = client.fetch_content()
-        agents = Loader.fetch("/agents")["data"]
-        maps = Loader.fetch("/maps")["data"]
-        modes = Loader.fetch("/gamemodes")["data"]
-        comp_tiers = Loader.fetch("/competitivetiers")["data"][-1]["tiers"]
-        
+        agents = Loader.fetch(session, "/agents")["data"]
+        maps = Loader.fetch(session, "/maps")["data"]
+        modes = Loader.fetch(session, "/gamemodes")["data"]
+        comp_tiers = Loader.fetch(session, "/competitivetiers")["data"][-1]["tiers"]
+
         for season in all_content["Seasons"]:
             if season["IsActive"] and season["Type"] == "act":
                 content_data["season"] = {
@@ -88,5 +98,7 @@ class Loader:
                 "display_name_localized": tier["tierName"][Localizer.locale],
                 "id": tier["tier"],
             })
+
+        Logger.debug("Done loading game content.")
 
         return content_data

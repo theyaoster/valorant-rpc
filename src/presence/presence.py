@@ -1,5 +1,4 @@
-from xmlrpc.client import ResponseError
-from valclient.exceptions import PhaseError
+from valclient.exceptions import PhaseError, ResponseError
 import time, os
 
 from .presence_utilities import Utilities
@@ -33,7 +32,9 @@ class Presence:
             self.content_data = Loader.load_all_content(self.client)
             self.presence_thread = KillableThread(target=self.main_loop, daemon=True)
             self.presence_thread.start()
-        except Exception:
+        except Exception as e:
+            Logger.debug(f"Error occured while fetching content or initiating presence thread: {e}")
+
             handle_error()
             self.kill_presence_thread()
 
@@ -59,7 +60,7 @@ class Presence:
             self.current_status = live_status
 
     # Get the status of a player
-    def get_status(self, presence_data=None):
+    def get_status(self, presence_data):
         status_type = presence_data["sessionLoopState"]
         if presence_data["isIdle"]:
             return self.get_afk_status(presence_data, self.content_data)
@@ -82,14 +83,11 @@ class Presence:
     # Status string for in menus
     def get_menu_status(self, data, content_data):
         _, mode_name = Utilities.fetch_mode_data(data,content_data)
-        if data["partyState"] == "DEFAULT":
-            # In lobby
+        if data["partyState"] == "DEFAULT": # In lobby
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {Utilities.get_party_status(data)}"
-        elif data["partyState"] == "MATCHMAKING":
-            # In queue
+        elif data["partyState"] == "MATCHMAKING": # In queue
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {Utilities.get_party_status(data)}"
-        elif data["partyState"] == "CUSTOM_GAME_SETUP":
-            # In Custom setup
+        elif data["partyState"] == "CUSTOM_GAME_SETUP": # In Custom setup
             data["MapID"] = data["matchMap"]
             _, map_name = Utilities.fetch_map_data(data, content_data)
             return f"{Localizer.get_localized_text('presences', 'client_states', 'custom_setup')} - {map_name} {Utilities.get_party_status(data)}"
@@ -119,11 +117,8 @@ class Presence:
                     _, mode_name = Utilities.fetch_mode_data(data, content_data)
                     my_score, other_score = data["partyOwnerMatchScoreAllyTeam"], data["partyOwnerMatchScoreEnemyTeam"]
                     return f"{mode_name} - {my_score} to {other_score} {Utilities.get_party_status(data)}"
-        except PhaseError as e:
-            Logger.debug(f"Ran into PhaseError (in-game): {e}")
-            return None
-        except ResponseError as e:
-            Logger.debug(f"Rand into ResponseError (in-game): {e}")
+        except (PhaseError, ResponseError) as e:
+            Logger.debug(f"Ran into {e.__class__.__name__} (in-game): {e}")
             return None
 
     # Status string for AFK (Idle)
@@ -134,5 +129,6 @@ class Presence:
     # Helper for killing this thread while notifying the user and the web service
     def kill_presence_thread(self, message=""):
         Logger.debug(f"Killing presence thread due to: {message}")
+
         self.ystr_client.offline()
         os._exit(1)

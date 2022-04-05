@@ -1,12 +1,6 @@
-urllib3
-iso8601
-Flask_Cors
-requests
 valclient
+requests
 pystray
-pyperclip
 cursor
 psutil
-Flask
 InquirerPy
-Pillow

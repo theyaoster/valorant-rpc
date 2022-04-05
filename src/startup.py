@@ -16,10 +16,6 @@ from .localization.localization import Localizer
 
 from .presence.presence import Presence
 
-user32 = ctypes.WinDLL('user32')
-kernel32 = ctypes.WinDLL('kernel32')
-window = kernel32.GetConsoleWindow()
-
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
     sys.stdout.write(f"{Cursor.UP()}\r{ansi.clear_line()}")
@@ -32,6 +28,7 @@ class Startup:
             if self.config["locale"][0] == "":
                 config = Localizer.prompt_locale(self.config)
                 Config.modify_config(config)
+                print()
 
             cursor.hide()
             Logger.create_logger()
@@ -55,13 +52,18 @@ class Startup:
             self.start_game()
 
             # Autodetect game region if it's not specified in the config (game must be running for this to work)
-            Localizer.autodetect_region(self.config)
-            Config.modify_config(self.config)
+            modified_region = Localizer.autodetect_region(self.config)
+            if modified_region:
+                Config.modify_config(self.config)
+
+            Logger.debug("About to initialize regionalized valclient...")
 
             # Initialize client for VALORANT's client-api
             self.client = valclient.Client(region=Localizer.get_config_value("region", 0))
             self.client.activate()
             self.presence.client = self.client
+
+            Logger.debug("About to dispatch systray thread...")
 
             # Initialize the systray element
             self.systray = Systray(self.client, self.config)
@@ -70,11 +72,16 @@ class Startup:
 
             # Initialize the thread that will poll the player status
             self.wait_for_presence()
+
+            Logger.debug("About to dispatch presence thread...")
+
             self.presence.start_thread()
 
             color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'startup_successful')}\n")])
             time.sleep(5)
-            user32.ShowWindow(window, 0)
+            ctypes.WinDLL('user32').ShowWindow(ctypes.WinDLL('kernel32').GetConsoleWindow(), 0)
+
+            Logger.debug("Program's up and running. Waiting for systray thread to terminate...")
 
             # Wait until systray thread terminates
             self.systray_thread.join()
@@ -82,6 +89,9 @@ class Startup:
 
     # Fetch player presence until it's not empty
     def wait_for_presence(self):
+        Logger.debug("Waiting for game presence...")
+        print()
+
         presence_timeout = Localizer.get_config_value("startup", "presence_timeout")
         presence_timer = 0
         while self.client.fetch_presence() is None:
@@ -91,6 +101,7 @@ class Startup:
             presence_timer += 1
             if presence_timer >= presence_timeout:
                 Logger.debug("Timed out waiting for presence!")
+
                 if self.systray is not None:
                     self.systray.exit()
                 os._exit(1)
@@ -102,10 +113,14 @@ class Startup:
     # Start VALORANT - this will return when the game process is detected
     def start_game(self):
         # Do nothing if game is already running
+        Logger.debug("Checking if game is already running...")
+
         if Processes.are_processes_running():
             return
 
         color_print([("Red", Localizer.get_localized_text("prints", "startup", "starting_valorant"))])
+
+        Logger.debug("Game is not already running, launching game...")
 
         path = RiotClientServices.get_rcs_path()
         psutil.subprocess.Popen([path, "--launch-product=valorant", "--launch-patchline=live"])
@@ -118,24 +133,32 @@ class Startup:
         while not Processes.are_processes_running():
             clear_last_line()
 
-            color_print([("Cyan", "["),("White",f"{launch_timer}"),("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_valorant')}")])
+            color_print([("Cyan", "["), ("White", str(launch_timer)), ("Cyan", f"] {Localizer.get_localized_text('prints', 'startup', 'waiting_for_valorant')}")])
             launch_timer += 1
 
             # Check if game is updating
             if launch_timer == update_time:
+                Logger.debug("Checking if the game is updating...")
+
                 if Processes.is_updating():
+                    Logger.debug("Game is updating. Waiting for user to execute manual step...")
+
                     clear_last_line()
-                    self.presence.update_if_status_changed("Updating") # patching the game
+                    self.presence.update_if_status_changed("Updating") # Dedicated updating status
                     input(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Press {Fore.MAGENTA}Enter{Fore.YELLOW} when you're finished and have launched the game...")
                     launch_timer = 0
+                else:
+                    Logger.debug("Verified that the game is not updating. Proceeding to wait for game launch...")
 
             # Check if timeout is exceeded
             if launch_timer >= launch_timeout:
                 Logger.debug("Timed out waiting for game!")
+
                 if self.systray is not None:
                     self.systray.exit()
                 os._exit(1)
 
             time.sleep(1) # Wait 1 second
 
+        clear_last_line()
         clear_last_line()

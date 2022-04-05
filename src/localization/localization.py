@@ -4,6 +4,7 @@ from colorama import Style
 import valclient
 
 from .locales import Locales
+from ..utilities.logging import Logger
 
 class Localizer:
 
@@ -84,17 +85,26 @@ class Localizer:
     def autodetect_region(config):
         # If the region is not specified in the config, try to autodetect it (this happens on first launch)
         if Localizer.get_config_value("region", 0) == "":
-            color_print([("Red bold", Localizer.get_localized_text("prints", "startup", "autodetect_region"))])
+            color_print([("Yellow", Localizer.get_localized_text("prints", "startup", "autodetect_region"))])
+
+            Logger.debug("About to initialize NA valclient for autodetecting region...")
 
             # Default to NA for now
             client = valclient.Client()
             client.activate()
+
+            Logger.debug("Client initialized. Now searching active game sessions for VALORANT...")
 
             # Find the valorant game session and fetch its region
             sessions = client.riotclient_session_fetch_sessions()
             val_session = next(session for _, session in sessions.items() if session["productId"] == "valorant")
             region = next(arg.split("=", 2)[1] for arg in val_session["launchConfiguration"]["arguments"] if "-ares-deployment" in arg) # The value of the ares-deployment arg is the region
 
-            # Update the config to specify the detected region
+            Logger.debug(f"Found region '{region}' from session {val_session}")
+
+            # Update the passed config to specify the detected region
             config[Localizer.get_config_key("region")][0] = region
-            color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'autodetected_region')} {Localizer.get_config_value('region', 0)}")])
+            color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'autodetected_region')} {Localizer.get_config_value('region', 0)}\n")])
+
+            return True
+        return False
