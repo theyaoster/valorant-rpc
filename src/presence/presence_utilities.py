@@ -1,4 +1,3 @@
-from ..utilities.logging import Logger
 from ..localization.localization import Localizer
 
 class Utilities:
@@ -19,36 +18,12 @@ class Utilities:
                 party_size[1] = 1
         return party_state, party_size
 
-    # @staticmethod
-    # def fetch_rank_data(client,content_data):
-    #     try:
-    #         mmr = client.fetch_mmr()["QueueSkills"]["competitive"]["SeasonalInfoBySeasonID"][content_data["season"]["season_uuid"]]
-    #     except:
-    #         return "rank_0","Rank not found"
-    #     rank_data = {}
-    #     for tier in content_data["comp_tiers"]:
-    #         if tier["id"] == mmr["CompetitiveTier"]:
-    #             rank_data = tier
-    #     rank_image = f"rank_{rank_data['id']}"
-    #     rank_text = f"{rank_data['display_name_localized']} - {mmr['RankedRating']}{Localizer.get_localized_text('presences','leveling','ranked_rating')}" + (f" // #{mmr['LeaderboardRank']}" if mmr['LeaderboardRank'] != 0 else "")
-
-    #     return rank_image, rank_text
-
     @staticmethod
     def fetch_map_data(coregame_data,content_data):
         for gmap in content_data["maps"]:
             if gmap["path"] == coregame_data["MapID"]:
                 return gmap["display_name"], gmap["display_name_localized"]
         return "", ""
-
-    # @staticmethod
-    # def fetch_agent_data(uuid,content_data):
-    #     for agent in content_data["agents"]:
-    #         if agent["uuid"] == uuid:
-    #             agent_image = f"agent_{agent['display_name'].lower().replace('/','')}"
-    #             agent_name = agent['display_name_localized']
-    #             return agent_image, agent_name
-    #     return "rank_0","?"
 
     @staticmethod
     def fetch_mode_data(data, content_data):

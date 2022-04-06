@@ -1,6 +1,0 @@
-valclient
-requests
-pystray
-cursor
-psutil
-InquirerPy

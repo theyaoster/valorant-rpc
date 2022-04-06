@@ -1,26 +1,30 @@
 import psutil
 
-from ..utilities.logging import Logger
+from .logging import Logger
+from .config.constants import Constants
 
-# Helper that iterates over active processes while catching any psutil errors,
-# which would cause the program to hang while starting the game
-def process_iter_with_handling():
+# Helper to get list of running processes
+def running_processes():
+    processes = []
     for proc in psutil.process_iter():
         try:
-            yield proc.name()
-        except Exception as e:
-            Logger.debug(f"Error occurred while iterating over running processes: {e}")
+            processes.append(proc.name())
+        except psutil.NoSuchProcess as e:
+            Logger.debug(f"Failed to find running process: {e}")
+            continue
+
+    return processes
 
 class Processes:
 
     @staticmethod
-    def are_processes_running(required_processes=["VALORANT-Win64-Shipping.exe", "RiotClientServices.exe"]):
-        return set(required_processes).issubset(process_iter_with_handling())
+    def are_processes_running(processes=Constants.GAME_EXES):
+        return set(processes).issubset(running_processes())
 
     @staticmethod
-    def is_program_already_running(program_name="VALORANT-ystr.exe"):
-        return len([proc_name for proc_name in process_iter_with_handling() if proc_name == program_name]) > 2
+    def is_program_already_running():
+        return running_processes().count(Constants.PROGRAM_EXE) > Constants.PROGRAM_PROC_COUNT
 
     @staticmethod
-    def is_updating(updating_processes=["RiotClientUx.exe", "RiotClientUxRender.exe"]):
-        return set(updating_processes).issubset(process_iter_with_handling())
+    def is_updating():
+        return Processes.are_processes_running(Constants.GAME_CLIENT_UX_EXES)

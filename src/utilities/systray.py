@@ -4,13 +4,11 @@ import ctypes, os, urllib.request, sys, time
 from InquirerPy.utils import color_print
 
 from .filepath import Filepath
-from .config.modify_config import ConfigEditor
+from .config.config_editor import ConfigEditor
 from ..localization.localization import Localizer
-from ..presence.presence_utilities import Utilities
+from .config.constants import Constants
 
-ICON_URI = "https://raw.githubusercontent.com/theyaoster/valorant-ystr/master/favicon.ico"
-ICON_FILENAME = "favicon.ico"
-ICON_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), ICON_FILENAME))
+ICON_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), Constants.ICON_FILENAME))
 
 class Systray:
 
@@ -31,7 +29,7 @@ class Systray:
             MenuItem('Restart', self.restart),
             MenuItem('Exit', self.exit)
         )
-        self.systray = Icon("VALORANT-ystr", systray_image, "VALORANT-ystr", systray_menu)
+        self.systray = Icon(Constants.PROGRAM_NAME, systray_image, Constants.PROGRAM_NAME, systray_menu)
         self.systray.run()
 
     def exit(self):
@@ -39,7 +37,7 @@ class Systray:
         os._exit(1)
 
     def generate_icon(self):
-        urllib.request.urlretrieve(ICON_URI, ICON_FILEPATH)
+        urllib.request.urlretrieve(Constants.ICON_URI, ICON_FILEPATH)
 
     def modify_config(self):
         self.show()

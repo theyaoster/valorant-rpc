@@ -1,6 +1,5 @@
 from InquirerPy import inquirer
 from InquirerPy.utils import color_print
-from colorama import Style
 import valclient
 
 from .locales import Locales
@@ -67,19 +66,20 @@ class Localizer:
 
     @staticmethod
     def prompt_locale(config):
-        locale = config["locale"]
-        current = locale[0]
-        options = locale[1]
-        print(Style.BRIGHT)
-        choice = inquirer.select(
-            message="Select your locale (language):",
-            default=current,
-            choices={option:option for option in options},
-            pointer=">"
-        )
-        choice = choice.execute()
-        locale[0] = choice
-        return config
+        if config["locale"][0] == "":
+            locale = config["locale"]
+            current = locale[0]
+            options = locale[1]
+            choice = inquirer.select(
+                message="Select your locale (language):",
+                default=current,
+                choices={option:option for option in options},
+                pointer=">"
+            )
+            choice = choice.execute()
+            locale[0] = choice
+
+            print() # So the console output looks pretty
 
     @staticmethod
     def autodetect_region(config):

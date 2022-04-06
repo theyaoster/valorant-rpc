@@ -45,9 +45,13 @@ class Presence:
         if status_override is None:
             try:
                 presence_data = self.client.fetch_presence()
-            except Exception as e:
+            except (PhaseError, ResponseError) as game_error:
+                # Some valclient-related error
+                Logger.debug(f"Ran into valclient error {game_error.__class__.__name__}: {game_error}")
+                return
+            except Exception as generic_error:
                 # Presence unexpectedly stopped
-                self.kill_presence_thread(f"Exiting due to error while fetching presence: {e}")
+                self.kill_presence_thread(f"Exiting due to error while fetching presence: {generic_error}")
 
             if presence_data is not None:
                 live_status = self.get_status(presence_data)
@@ -72,9 +76,13 @@ class Presence:
             return self.get_pregame_status(presence_data, self.content_data)
         elif status_type == "INGAME":
             return self.get_ingame_status(presence_data, self.content_data)
+        elif status_type == "MATCHMADE_GAME_STARTING":
+            return self.get_matchmade_status(presence_data, self.content_data)
         else:
             # Unknown status type
-            Logger.debug(f"Unknown status type: {status_type}")
+            message = f"Unknown status type: {status_type}"
+            Logger.debug(message)
+            raise ValueError(message)
 
     # Status string for game startup
     def get_startup_status(self):
@@ -96,30 +104,25 @@ class Presence:
             Logger.debug(f"Unknown party state: {data['partyState']}")
             raise ValueError(f"Unknown party state: {data['partyState']}")
 
+    # Status when match is found but not started
+    def get_matchmade_status(self, data, content_data):
+        _, mode_name = Utilities.fetch_mode_data(data, content_data)
+        return f"{mode_name} - Match Found {Utilities.get_party_status(data)}"
+
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):
-        try:
-            _, mode_name = Utilities.fetch_mode_data(data, content_data)
-            return f"{mode_name} - {Localizer.get_localized_text('presences','client_states','pregame')} {Utilities.get_party_status(data)}"
-        except PhaseError as e:
-            Logger.debug(f"Ran into PhaseError (pregame): {e}")
-            return None
+        _, mode_name = Utilities.fetch_mode_data(data, content_data)
+        return f"{mode_name} - {Localizer.get_localized_text('presences','client_states','pregame')} {Utilities.get_party_status(data)}"
 
     # Status string for in-game (and the range)
     def get_ingame_status(self, data, content_data):
-        try:
-            coregame = self.client.coregame_fetch_player()
-            if coregame is not None:
-                if data["provisioningFlow"] == "ShootingRange":
-                    data["MapID"] = "/Game/Maps/Poveglia/Range"
-                    return f"The Range {Utilities.get_party_status(data)}"
-                else:
-                    _, mode_name = Utilities.fetch_mode_data(data, content_data)
-                    my_score, other_score = data["partyOwnerMatchScoreAllyTeam"], data["partyOwnerMatchScoreEnemyTeam"]
-                    return f"{mode_name} - {my_score} to {other_score} {Utilities.get_party_status(data)}"
-        except (PhaseError, ResponseError) as e:
-            Logger.debug(f"Ran into {e.__class__.__name__} (in-game): {e}")
-            return None
+        if data["provisioningFlow"] == "ShootingRange":
+            data["MapID"] = "/Game/Maps/Poveglia/Range"
+            return f"The Range {Utilities.get_party_status(data)}"
+        else:
+            _, mode_name = Utilities.fetch_mode_data(data, content_data)
+            my_score, other_score = data["partyOwnerMatchScoreAllyTeam"], data["partyOwnerMatchScoreEnemyTeam"]
+            return f"{mode_name} - {my_score} to {other_score} {Utilities.get_party_status(data)}"
 
     # Status string for AFK (Idle)
     def get_afk_status(self, data, content_data):

@@ -1,20 +1,21 @@
 from InquirerPy.utils import color_print
 from colorama import Fore, Style, Cursor, ansi
-import psutil, time, cursor, valclient, ctypes, os, sys
+import subprocess, time, cursor, valclient, ctypes, os, sys, requests
 
 from .utilities.error_handling import handle_error
 from .utilities.killable_thread import KillableThread
 from .utilities.config.app_config import Config
 from .utilities.processes import Processes
-from .utilities.rcs import RiotClientServices
+from .utilities.filepath import Filepath
 from .utilities.systray import Systray
-from .utilities.version_checker import Checker
+from .utilities.version_checker import VersionChecker
 from .utilities.logging import Logger
-from .utilities.program_data import ProgramData
 
 from .localization.localization import Localizer
 
 from .presence.presence import Presence
+
+GAME_CMD_TIMEOUT = 5 # seconds
 
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
@@ -24,36 +25,24 @@ class Startup:
 
     def __init__(self):
         if not Processes.is_program_already_running():
-            self.config = Config.fetch_config()
-            if self.config["locale"][0] == "":
-                config = Localizer.prompt_locale(self.config)
-                Config.modify_config(config)
-                print()
-
-            cursor.hide()
             Logger.create_logger()
-            ProgramData.update_file_location()
-            ProgramData.fetch_installs()
-            Localizer.set_locale(self.config)
-            self.config = Config.check_config()
-            Localizer.config = self.config
+            self.load_and_localize_config()
+            self.systray = None # Just so this attribute exists
+            cursor.hide()
 
-            # If an update's available, print a message
-            Checker.check_version(self.config)
+            VersionChecker.check() # If an update's available, print a message
 
-            # Initialize http client
+            # Attempt to initialize http client
             try:
                 self.presence = Presence(self.config)
             except Exception as e:
                 handle_error(e)
                 os._exit(1)
 
-            # Launch the game
-            self.start_game()
+            self.start_game() # Launch the game and wait for its processes to exist
 
             # Autodetect game region if it's not specified in the config (game must be running for this to work)
-            modified_region = Localizer.autodetect_region(self.config)
-            if modified_region:
+            if Localizer.autodetect_region(self.config):
                 Config.modify_config(self.config)
 
             Logger.debug("About to initialize regionalized valclient...")
@@ -70,16 +59,15 @@ class Startup:
             self.systray_thread = KillableThread(target=self.systray.run)
             self.systray_thread.start()
 
-            # Initialize the thread that will poll the player status
-            self.wait_for_presence()
+            self.wait_for_presence() # Poll game presence until the presence data isn't empty
 
             Logger.debug("About to dispatch presence thread...")
 
-            self.presence.start_thread()
+            self.presence.start_thread() # Initialize the thread that will poll the player status
 
             color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'startup_successful')}\n")])
             time.sleep(5)
-            ctypes.WinDLL('user32').ShowWindow(ctypes.WinDLL('kernel32').GetConsoleWindow(), 0)
+            ctypes.WinDLL('user32').ShowWindow(ctypes.WinDLL('kernel32').GetConsoleWindow(), 0) # Hide the window
 
             Logger.debug("Program's up and running. Waiting for systray thread to terminate...")
 
@@ -94,19 +82,22 @@ class Startup:
 
         presence_timeout = Localizer.get_config_value("startup", "presence_timeout")
         presence_timer = 0
-        while self.client.fetch_presence() is None:
-            clear_last_line()
-            color_print([("Cyan", "["), ("White", str(presence_timer)), ("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_presence')}")])
+        try:
+            while self.client.fetch_presence() is None:
+                clear_last_line()
+                color_print([("Cyan", "["), ("White", str(presence_timer)), ("Cyan", f"] {Localizer.get_localized_text('prints','startup','waiting_for_presence')}")])
 
-            presence_timer += 1
-            if presence_timer >= presence_timeout:
-                Logger.debug("Timed out waiting for presence!")
+                presence_timer += 1
+                if presence_timer >= presence_timeout:
+                    Logger.debug("Timed out waiting for presence!")
 
-                if self.systray is not None:
-                    self.systray.exit()
-                os._exit(1)
+                    self.die()
 
-            time.sleep(1) # Wait 1 second
+                time.sleep(1) # Wait 1 second
+        except requests.exceptions.ConnectionError:
+            Logger.debug("Failed to fetch presence from the client due to refused connection - exiting.")
+
+            self.die()
 
         clear_last_line()
 
@@ -118,15 +109,18 @@ class Startup:
         if Processes.are_processes_running():
             return
 
+        rcs_path = Filepath.get_rcs_path()
+        Logger.debug(f"Found RCS at: {rcs_path}")
+
         color_print([("Red", Localizer.get_localized_text("prints", "startup", "starting_valorant"))])
 
         Logger.debug("Game is not already running, launching game...")
 
-        path = RiotClientServices.get_rcs_path()
-        psutil.subprocess.Popen([path, "--launch-product=valorant", "--launch-patchline=live"])
-        print()
+        # Attempt to launch the game
+        subprocess.Popen([rcs_path, "--launch-product=valorant", "--launch-patchline=live"])
 
         # Now wait for the game process to exist...
+        print()
         launch_timer = 0
         launch_timeout = Localizer.get_config_value("startup", "game_launch_timeout")
         update_time = Localizer.get_config_value("startup", "check_if_updating_time")
@@ -154,11 +148,24 @@ class Startup:
             if launch_timer >= launch_timeout:
                 Logger.debug("Timed out waiting for game!")
 
-                if self.systray is not None:
-                    self.systray.exit()
-                os._exit(1)
+                self.die()
 
             time.sleep(1) # Wait 1 second
 
         clear_last_line()
         clear_last_line()
+
+    # Config initialization business
+    def load_and_localize_config(self):
+        self.config = Config.fetch_config()
+        Localizer.prompt_locale(self.config)
+        Localizer.set_locale(self.config)
+        self.config = Config.localize_config(self.config)
+        Config.modify_config(self.config)
+        Localizer.config = self.config
+
+    # Helper to handle program exit in the case of unexpected failures
+    def die(self):
+        if self.systray is not None:
+            self.systray.exit()
+        os._exit(1)
