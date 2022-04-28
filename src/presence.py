@@ -73,8 +73,6 @@ class Presence:
             return self.get_pregame_status(presence_data, self.content_data)
         elif status_type == "INGAME":
             return self.get_ingame_status(presence_data, self.content_data)
-        elif status_type == "MATCHMADE_GAME_STARTING":
-            return self.get_matchmade_status(presence_data, self.content_data)
         else:
             # Unknown status type
             message = f"Unknown status type: {status_type}"
@@ -87,11 +85,13 @@ class Presence:
 
     # Status string for in menus
     def get_menu_status(self, data, content_data):
-        _, mode_name = ContentUtilities.fetch_mode_data(data,content_data)
+        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
         if data["partyState"] == "DEFAULT": # In lobby
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {ContentUtilities.get_party_status(data)}"
         elif data["partyState"] == "MATCHMAKING": # In queue
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {ContentUtilities.get_party_status(data)}"
+        elif data["partyState"] == "MATCHMADE_GAME_STARTING": # Match found
+            return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
         elif data["partyState"] == "CUSTOM_GAME_SETUP": # In Custom setup
             data["MapID"] = data["matchMap"]
             _, map_name = ContentUtilities.fetch_map_data(data, content_data)
@@ -100,11 +100,6 @@ class Presence:
             # Unknown party state
             Logger.debug(f"Unknown party state: {data['partyState']}")
             raise ValueError(f"Unknown party state: {data['partyState']}")
-
-    # Status when match is found but not started
-    def get_matchmade_status(self, data, content_data):
-        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
-        return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
 
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):

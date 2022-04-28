@@ -138,7 +138,7 @@ class Startup:
                     self.presence.update_if_status_changed(YstrClient.UPDATING_STATUS)
                     print(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Waiting until game is launched...")
                     update_wait_time = Localizer.get_config_value("startup", "check_if_updating_freq")
-                    while not Processes.__are_processes_running():
+                    while not Processes.is_game_running():
                         time.sleep(update_wait_time)
 
                     print("Game detected!")
