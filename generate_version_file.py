@@ -1,7 +1,7 @@
 import time
 
-from src.utilities.config.constants import Constants
-from src.utilities.filepath import Filepath
+from src.config.constants import Constants
+from src.utility_functions import Filepath
 
 current_time = int(time.time())
 

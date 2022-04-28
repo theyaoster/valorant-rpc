@@ -2,8 +2,8 @@ from InquirerPy.utils import color_print
 import os, ctypes, colorama
 
 from src.startup import Startup
-from src.utilities.config.constants import Constants
-from src.utilities.error_handling import handle_error
+from src.config.constants import Constants
+from src.utility_functions import ErrorHandling
 
 colorama.init(autoreset=True)
 
@@ -24,5 +24,5 @@ if __name__ == "__main__":
 
         Startup()
     except:
-        handle_error()
+        ErrorHandling.handle_error()
         os._exit(1)

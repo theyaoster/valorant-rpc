@@ -2,20 +2,15 @@ from InquirerPy.utils import color_print
 from colorama import Fore, Style, Cursor, ansi
 import subprocess, time, cursor, valclient, ctypes, os, sys, requests
 
-from .utilities.error_handling import handle_error
-from .utilities.killable_thread import KillableThread
-from .utilities.config.app_config import Config
-from .utilities.processes import Processes
-from .utilities.filepath import Filepath
-from .utilities.systray import Systray
-from .utilities.version_checker import VersionChecker
-from .utilities.logging import Logger
+from .utility_functions import Filepath, Processes, Logger, ErrorHandling, VersionChecker
+from .lib.killable_thread import KillableThread
+from .config.app_config import ApplicationConfig
+from .systray import Systray
+from .lib.ystr_client import YstrClient
 
 from .localization.localization import Localizer
 
-from .presence.presence import Presence
-
-GAME_CMD_TIMEOUT = 5 # seconds
+from .presence import Presence
 
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
@@ -30,20 +25,19 @@ class Startup:
             self.systray = None # Just so this attribute exists
             cursor.hide()
 
-            VersionChecker.check() # If an update's available, print a message
+            VersionChecker.check_version() # If an update's available, print a message
 
             # Attempt to initialize http client
             try:
                 self.presence = Presence(self.config)
             except Exception as e:
-                handle_error(e)
+                ErrorHandling.handle_error(e)
                 os._exit(1)
 
             self.start_game() # Launch the game and wait for its processes to exist
 
             # Autodetect game region if it's not specified in the config (game must be running for this to work)
-            if Localizer.autodetect_region(self.config):
-                Config.modify_config(self.config)
+            self.autodetect_region(self.config)
 
             Logger.debug("About to initialize regionalized valclient...")
 
@@ -91,7 +85,7 @@ class Startup:
                 if presence_timer >= presence_timeout:
                     Logger.debug("Timed out waiting for presence!")
 
-                    self.die()
+                    self.handle_timeout("game presence")
 
                 time.sleep(1) # Wait 1 second
         except requests.exceptions.ConnectionError:
@@ -106,7 +100,7 @@ class Startup:
         # Do nothing if game is already running
         Logger.debug("Checking if game is already running...")
 
-        if Processes.are_processes_running():
+        if Processes.is_game_running():
             return
 
         rcs_path = Filepath.get_rcs_path()
@@ -124,7 +118,7 @@ class Startup:
         launch_timer = 0
         launch_timeout = Localizer.get_config_value("startup", "game_launch_timeout")
         update_time = Localizer.get_config_value("startup", "check_if_updating_time")
-        while not Processes.are_processes_running():
+        while not Processes.is_game_running():
             clear_last_line()
 
             color_print([("Cyan", "["), ("White", str(launch_timer)), ("Cyan", f"] {Localizer.get_localized_text('prints', 'startup', 'waiting_for_valorant')}")])
@@ -133,13 +127,21 @@ class Startup:
             # Check if game is updating
             if launch_timer == update_time:
                 Logger.debug("Checking if the game is updating...")
+                Logger.debug(f"Process list: {Processes.running_processes()}")
 
                 if Processes.is_updating():
                     Logger.debug("Game is updating. Waiting for user to execute manual step...")
 
                     clear_last_line()
-                    self.presence.update_if_status_changed("Updating") # Dedicated updating status
-                    input(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Press {Fore.MAGENTA}Enter{Fore.YELLOW} when you're finished and have launched the game...")
+                    print()
+
+                    self.presence.update_if_status_changed(YstrClient.UPDATING_STATUS)
+                    print(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Waiting until game is launched...")
+                    update_wait_time = Localizer.get_config_value("startup", "check_if_updating_freq")
+                    while not Processes.__are_processes_running():
+                        time.sleep(update_wait_time)
+
+                    print("Game detected!")
                     launch_timer = 0
                 else:
                     Logger.debug("Verified that the game is not updating. Proceeding to wait for game launch...")
@@ -148,7 +150,7 @@ class Startup:
             if launch_timer >= launch_timeout:
                 Logger.debug("Timed out waiting for game!")
 
-                self.die()
+                self.handle_timeout("VALORANT to launch")
 
             time.sleep(1) # Wait 1 second
 
@@ -157,15 +159,47 @@ class Startup:
 
     # Config initialization business
     def load_and_localize_config(self):
-        self.config = Config.fetch_config()
+        self.config = ApplicationConfig.fetch_config()
         Localizer.prompt_locale(self.config)
         Localizer.set_locale(self.config)
-        self.config = Config.localize_config(self.config)
-        Config.modify_config(self.config)
+        self.config = ApplicationConfig.localize_config(self.config)
+        ApplicationConfig.modify_config(self.config)
         Localizer.config = self.config
+
+    def autodetect_region(self, config):
+        # If the region is not specified in the config, try to autodetect it (this happens on first launch)
+        if Localizer.get_config_value("region", 0) == "":
+            color_print([("Yellow", Localizer.get_localized_text("prints", "startup", "autodetect_region"))])
+
+            Logger.debug("About to initialize NA valclient for autodetecting region...")
+
+            # Default to NA for now
+            client = valclient.Client()
+            client.activate()
+
+            Logger.debug("Client initialized. Now searching active game sessions for VALORANT...")
+
+            # Find the valorant game session and fetch its region
+            sessions = client.riotclient_session_fetch_sessions()
+            val_session = next(session for _, session in sessions.items() if session["productId"] == "valorant")
+            region = next(arg.split("=", 2)[1] for arg in val_session["launchConfiguration"]["arguments"] if "-ares-deployment" in arg) # The value of the ares-deployment arg is the region
+
+            Logger.debug(f"Found region '{region}' from session {val_session}")
+
+            # Update the passed config to specify the detected region
+            config[Localizer.get_config_key("region")][0] = region
+            color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'autodetected_region')} {Localizer.get_config_value('region', 0)}\n")])
+
+            ApplicationConfig.modify_config(config)
 
     # Helper to handle program exit in the case of unexpected failures
     def die(self):
         if self.systray is not None:
             self.systray.exit()
         os._exit(1)
+
+    # Handling timeout events
+    def handle_timeout(self, cause):
+        color_print([("Red bold", f"Timed out while waiting for {cause}!\n")])
+        input(Localizer.get_localized_text("prints", "errors", "exit"))
+        self.die()

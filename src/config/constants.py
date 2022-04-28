@@ -19,3 +19,5 @@ class Constants:
 
     LATEST_RELEASE_API_URL = "https://api.github.com/repos/theyaoster/valorant-ystr/releases/latest"
     REPO_URL = "https://github.com/theyaoster/valorant-ystr"
+
+    LOGFILE = "ystr.log"

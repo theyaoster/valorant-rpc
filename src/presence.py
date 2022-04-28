@@ -1,15 +1,12 @@
 from valclient.exceptions import PhaseError, ResponseError
 import time, os
 
-from .presence_utilities import Utilities
+from .utility_functions import ContentUtilities, ErrorHandling, Logger, ContentLoader
+from .localization.localization import Localizer
+from .lib.killable_thread import KillableThread
+from .lib.ystr_client import YstrClient
 
-from ..content.content_loader import Loader
-from ..localization.localization import Localizer
-from ..utilities.error_handling import handle_error
-from ..utilities.killable_thread import KillableThread
-from ..utilities.logging import Logger
-from ..utilities.ystr_client import YstrClient
-
+# Implementation of a thread that polls for the player's game presence
 class Presence:
 
     def __init__(self, config):
@@ -29,13 +26,13 @@ class Presence:
     # Start the thread to continuously poll game presence
     def start_thread(self):
         try:
-            self.content_data = Loader.load_all_content(self.client)
+            self.content_data = ContentLoader.load_all_content(self.client)
             self.presence_thread = KillableThread(target=self.main_loop, daemon=True)
             self.presence_thread.start()
         except Exception as e:
             Logger.debug(f"Error occured while fetching content or initiating presence thread: {e}")
 
-            handle_error()
+            ErrorHandling.handle_error()
             self.kill_presence_thread()
 
     # Only update status if a change is detected - this reduces network usage
@@ -90,15 +87,15 @@ class Presence:
 
     # Status string for in menus
     def get_menu_status(self, data, content_data):
-        _, mode_name = Utilities.fetch_mode_data(data,content_data)
+        _, mode_name = ContentUtilities.fetch_mode_data(data,content_data)
         if data["partyState"] == "DEFAULT": # In lobby
-            return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {Utilities.get_party_status(data)}"
+            return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {ContentUtilities.get_party_status(data)}"
         elif data["partyState"] == "MATCHMAKING": # In queue
-            return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {Utilities.get_party_status(data)}"
+            return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {ContentUtilities.get_party_status(data)}"
         elif data["partyState"] == "CUSTOM_GAME_SETUP": # In Custom setup
             data["MapID"] = data["matchMap"]
-            _, map_name = Utilities.fetch_map_data(data, content_data)
-            return f"{Localizer.get_localized_text('presences', 'client_states', 'custom_setup')} - {map_name} {Utilities.get_party_status(data)}"
+            _, map_name = ContentUtilities.fetch_map_data(data, content_data)
+            return f"{Localizer.get_localized_text('presences', 'client_states', 'custom_setup')} - {map_name} {ContentUtilities.get_party_status(data)}"
         else:
             # Unknown party state
             Logger.debug(f"Unknown party state: {data['partyState']}")
@@ -106,28 +103,28 @@ class Presence:
 
     # Status when match is found but not started
     def get_matchmade_status(self, data, content_data):
-        _, mode_name = Utilities.fetch_mode_data(data, content_data)
-        return f"{mode_name} - Match Found {Utilities.get_party_status(data)}"
+        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+        return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
 
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):
-        _, mode_name = Utilities.fetch_mode_data(data, content_data)
-        return f"{mode_name} - {Localizer.get_localized_text('presences','client_states','pregame')} {Utilities.get_party_status(data)}"
+        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+        return f"{mode_name} - {Localizer.get_localized_text('presences','client_states','pregame')} {ContentUtilities.get_party_status(data)}"
 
     # Status string for in-game (and the range)
     def get_ingame_status(self, data, content_data):
         if data["provisioningFlow"] == "ShootingRange":
             data["MapID"] = "/Game/Maps/Poveglia/Range"
-            return f"The Range {Utilities.get_party_status(data)}"
+            return f"The Range {ContentUtilities.get_party_status(data)}"
         else:
-            _, mode_name = Utilities.fetch_mode_data(data, content_data)
+            _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
             my_score, other_score = data["partyOwnerMatchScoreAllyTeam"], data["partyOwnerMatchScoreEnemyTeam"]
-            return f"{mode_name} - {my_score} to {other_score} {Utilities.get_party_status(data)}"
+            return f"{mode_name} - {my_score} to {other_score} {ContentUtilities.get_party_status(data)}"
 
     # Status string for AFK (Idle)
     def get_afk_status(self, data, content_data):
-        _, mode_name = Utilities.fetch_mode_data(data, content_data)
-        return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'away')} {Utilities.get_party_status(data)}"
+        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+        return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'away')} {ContentUtilities.get_party_status(data)}"
 
     # Helper for killing this thread while notifying the user and the web service
     def kill_presence_thread(self, message=""):

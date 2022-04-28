@@ -1,8 +1,8 @@
 from InquirerPy.utils import color_print
 from InquirerPy import inquirer
 
-from .app_config import Config
-from ...localization.localization import Localizer
+from .app_config import ApplicationConfig
+from ..localization.localization import Localizer
 
 MAIN_SECTION = "main"
 BACK_VALUE = "back"
@@ -11,7 +11,7 @@ UNMODIFIABLE = ["version", "presence_refresh_interval", "startup"]
 class ConfigEditor:
 
     def __init__(self):
-        self.config = Config.fetch_config()
+        self.config = ApplicationConfig.fetch_config()
 
         self.config_menu(MAIN_SECTION, self.config)
 
@@ -35,7 +35,7 @@ class ConfigEditor:
             if section != MAIN_SECTION:
                 callback(*callback_args)
             elif callback is None:
-                Config.modify_config(self.config)
+                ApplicationConfig.modify_config(self.config)
                 color_print([("LimeGreen", Localizer.get_localized_text("prints","config_modification","config_saved"))])
         else:
             if isinstance(choices[choice], dict):
@@ -44,10 +44,10 @@ class ConfigEditor:
                 if choice == Localizer.get_config_key("locale"):
                     # translate config
                     new_locale = self.config_set(choice, choices[choice])[0]
-                    self.config = Config.localize_config(self.config,True)
+                    self.config = ApplicationConfig.localize_config(self.config,True)
                     self.config["locale"][0] = new_locale
                     Localizer.locale = new_locale
-                    self.config = Config.localize_config(self.config,False)
+                    self.config = ApplicationConfig.localize_config(self.config,False)
                     Localizer.config = self.config
                 else:
                     choices[choice] = self.config_set(choice, choices[choice])

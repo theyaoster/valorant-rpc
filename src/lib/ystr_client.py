@@ -1,14 +1,14 @@
 import os, requests
 
 from requests.exceptions import ConnectionError, ReadTimeout
-from .filepath import Filepath
-from .logging import Logger
+from ..utility_functions import Filepath, Logger
 
 class YstrClient:
 
     HTML_INDICATOR = "!doctype html"
     SECRET_REPLACEMENT = "REDACTED"
     OFFLINE_STATUS = "Offline"
+    UPDATING_STATUS = "Updating"
     LIVE_STATUS_PATH = "live_status"
     TIMEOUT = 5 # seconds
 
@@ -27,7 +27,7 @@ class YstrClient:
         test_response = None
         try:
             test_response = self.update_status("Loading")
-            Logger.debug(test_response.content)
+            Logger.debug(f"Test call response content: {test_response.content}")
         except ReadTimeout:
             raise Exception(f"Timed out while testing connection to endpoint - the configured credentials or endpoint are probably wrong! Fix them in {self.config_path} and relaunch.")
 
