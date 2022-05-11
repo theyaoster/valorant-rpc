@@ -63,21 +63,25 @@ class Presence:
     # Get the status of a player
     def get_status(self, presence_data):
         status_type = presence_data["sessionLoopState"]
+
         if presence_data["isIdle"]:
-            return self.get_afk_status(presence_data, self.content_data)
+            message = self.get_afk_status(presence_data, self.content_data)
         elif status_type == "startup":
-            return self.get_startup_status()
+            message = self.get_startup_status()
         elif status_type == "MENUS":
-            return self.get_menu_status(presence_data, self.content_data)
+            message = self.get_menu_status(presence_data, self.content_data)
         elif status_type == "PREGAME":
-            return self.get_pregame_status(presence_data, self.content_data)
+            message = self.get_pregame_status(presence_data, self.content_data)
         elif status_type == "INGAME":
-            return self.get_ingame_status(presence_data, self.content_data)
+            message = self.get_ingame_status(presence_data, self.content_data)
         else:
             # Unknown status type
             message = f"Unknown status type: {status_type}"
             Logger.debug(message)
             raise ValueError(message)
+
+        # Standardized presence format for the server to parse
+        return f"{'AFK' if presence_data['isIdle'] else status_type.upper()};{presence_data['partyState']};{presence_data['provisioningFlow']};{message}"
 
     # Status string for game startup
     def get_startup_status(self):
@@ -104,7 +108,7 @@ class Presence:
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):
         _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
-        return f"{mode_name} - {Localizer.get_localized_text('presences','client_states','pregame')} {ContentUtilities.get_party_status(data)}"
+        return f"{mode_name} - Agent Select {ContentUtilities.get_party_status(data)}"
 
     # Status string for in-game (and the range)
     def get_ingame_status(self, data, content_data):
