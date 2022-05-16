@@ -139,23 +139,56 @@ class ContentUtilities:
         else:
             return f"(in a {size[0]}-stack)"
 
+class ContentCache:
+
+    def __init__(self):
+        self.agents = None
+        self.contracts = None
+
 # Utility for loading game content details (this should only be used once per program instance)
 class ContentLoader:
 
+    CONTENT_CACHE = ContentCache()
     CONTENT_LOAD_TIMEOUT = 5 # Seconds
     RETRY_STRATEGY = Retry(total=5, backoff_factor=1) # 5 max retries
+    SESSION = requests.Session()
+    SESSION.mount("https://", HTTPAdapter(max_retries=RETRY_STRATEGY))
 
     @staticmethod
-    def __fetch(session, endpoint="/"):
-        data = session.get(f"https://valorant-api.com/v1{endpoint}?language=all", timeout=ContentLoader.CONTENT_LOAD_TIMEOUT)
+    def __fetch(endpoint="/", language="all"):
+        data = ContentLoader.SESSION.get(f"https://valorant-api.com/v1{endpoint}?language={language}", timeout=ContentLoader.CONTENT_LOAD_TIMEOUT)
         return data.json()
+
+    @staticmethod
+    def cache_contracts():
+        raw_contract_data = ContentLoader.__fetch("/contracts", "en-US")
+        filtered_data = {}
+        for contract in raw_contract_data["data"]:
+            filtered_data[contract["displayName"].lower().split()[0]] = contract["uuid"]
+        ContentLoader.CONTENT_CACHE.contracts = filtered_data
+
+    @staticmethod
+    def get_contract(agent):
+        if ContentLoader.CONTENT_CACHE.contracts is None:
+            ContentLoader.cache_contracts()
+
+        if agent not in ContentLoader.CONTENT_CACHE.contracts:
+            raise ValueError(f"Unknown agent {agent}! Could not find their contract.")
+
+        return ContentLoader.CONTENT_CACHE.contracts[agent]
+
+    @staticmethod
+    def get_agents():
+        if ContentLoader.CONTENT_CACHE.agents is None:
+            raw_agent_data = ContentLoader.SESSION.get(f"https://valorant-api.com/v1/agents?language=en-US&isPlayableCharacter=true", timeout=ContentLoader.CONTENT_LOAD_TIMEOUT).json()
+            agent_names = [agent["displayName"].lower() for agent in raw_agent_data["data"]]
+            ContentLoader.CONTENT_CACHE.agents = agent_names
+
+        return ContentLoader.CONTENT_CACHE.agents
 
     @staticmethod
     def load_all_content(client):
         Logger.debug("Calling VALORANT API to load game content in memory...")
-
-        session = requests.Session()
-        session.mount("https://", HTTPAdapter(max_retries=ContentLoader.RETRY_STRATEGY))
 
         content_data = {
             "agents": [],
@@ -191,10 +224,10 @@ class ContentLoader:
             "modes_with_icons": ["ggteam","onefa","snowball","spikerush","unrated","deathmatch"]
         }
         all_content = client.fetch_content()
-        agents = ContentLoader.__fetch(session, "/agents")["data"]
-        maps = ContentLoader.__fetch(session, "/maps")["data"]
-        modes = ContentLoader.__fetch(session, "/gamemodes")["data"]
-        comp_tiers = ContentLoader.__fetch(session, "/competitivetiers")["data"][-1]["tiers"]
+        agents = ContentLoader.__fetch("/agents")["data"]
+        maps = ContentLoader.__fetch("/maps")["data"]
+        modes = ContentLoader.__fetch("/gamemodes")["data"]
+        comp_tiers = ContentLoader.__fetch("/competitivetiers")["data"][-1]["tiers"]
 
         for season in all_content["Seasons"]:
             if season["IsActive"] and season["Type"] == "act":
@@ -266,9 +299,9 @@ class Logger:
 
         # Create logger
         os.makedirs(Filepath.get_path(Filepath.get_appdata_folder()), exist_ok=True)
-        logging.basicConfig(filename=Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), Constants.PROGRAM_NAME + ".log")),
+        logging.basicConfig(filename=Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), Constants.LOG_FILENAME)),
                             filemode='w+',
-                            format='%(asctime)s.%(msecs)d %(name)s %(levelname)s %(message)s',
+                            format='[%(asctime)s.%(msecs)d %(name)s %(levelname)s]: %(message)s',
                             datefmt='%H:%M:%S',
                             level=logging.DEBUG)
 

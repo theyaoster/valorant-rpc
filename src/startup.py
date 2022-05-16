@@ -6,11 +6,11 @@ from .utility_functions import Filepath, Processes, Logger, ErrorHandling, Versi
 from .lib.killable_thread import KillableThread
 from .config.app_config import ApplicationConfig
 from .systray import Systray
+from .presence import Presence
+from .contract import ContractManager
 from .lib.ystr_client import YstrClient
 
 from .localization.localization import Localizer
-
-from .presence import Presence
 
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
@@ -29,9 +29,13 @@ class Startup:
 
             # Attempt to initialize http client
             try:
+                Logger.debug("Creating presence object...")
+
                 self.presence = Presence(self.config)
             except Exception as e:
-                ErrorHandling.handle_error(e)
+                Logger.debug(f"Error creating presence: {e}")
+
+                ErrorHandling.handle_error()
                 os._exit(1)
 
             self.start_game() # Launch the game and wait for its processes to exist
@@ -45,6 +49,13 @@ class Startup:
             self.client = valclient.Client(region=Localizer.get_config_value("region", 0))
             self.client.activate()
             self.presence.client = self.client
+
+            Logger.debug("About to initialize contract manager...")
+
+            # Initialize contract manager
+            self.contract_manager = ContractManager(self.client, self.config)
+            self.contract_manager.start_sync_thread()
+            self.contract_manager.start_poll_thread()
 
             Logger.debug("About to dispatch systray thread...")
 
@@ -68,6 +79,12 @@ class Startup:
             # Wait until systray thread terminates
             self.systray_thread.join()
             self.presence.presence_thread.stop()
+            self.contract_manager.sync_thread.stop()
+            self.contract_manager.poll_thread.stop()
+        else:
+            Logger.debug("Program is already running - erroring out.")
+
+            raise Exception("Another instance of this program is already running.")
 
     # Fetch player presence until it's not empty
     def wait_for_presence(self):
@@ -98,9 +115,9 @@ class Startup:
     # Start VALORANT - this will return when the game process is detected
     def start_game(self):
         # Do nothing if game is already running
-        Logger.debug("Checking if game is already running...")
-
         if Processes.is_game_running():
+            Logger.debug("Game is already running.")
+
             return
 
         rcs_path = Filepath.get_rcs_path()
@@ -162,6 +179,9 @@ class Startup:
         self.config = ApplicationConfig.fetch_config()
         Localizer.prompt_locale(self.config)
         Localizer.set_locale(self.config)
+
+        Logger.debug("Localizing config...")
+
         self.config = ApplicationConfig.localize_config(self.config)
         ApplicationConfig.modify_config(self.config)
         Localizer.config = self.config

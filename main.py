@@ -23,6 +23,6 @@ if __name__ == "__main__":
         kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7) # Allow ANSI sequences
 
         Startup()
-    except:
+    except Exception:
         ErrorHandling.handle_error()
         os._exit(1)

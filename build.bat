@@ -30,6 +30,7 @@
 
 :--------------------------------------
     REM Install pigar if it's not installed already
+    python -m pip install --upgrade pip | findstr /V /C:"Requirement already satisfied" | findstr /C:"Successfully installed"
     pip install pigar | findstr /V /C:"Requirement already satisfied"
 
     REM Generate requirements.txt

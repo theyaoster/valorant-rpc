@@ -15,6 +15,8 @@ PLACEHOLDER_VALUE = "THIS IS A PLACEHOLDER"
 default_config = {
     "region": ["", Client.fetch_regions()],
     "presence_refresh_interval": 2,
+    "contract_poll_interval": 20,
+    "contract_sync_interval": 2,
     "locale": ["", [locale for locale, data in Locales.items() if data != {}]],
     "startup": {
         "game_launch_timeout": 60,
@@ -93,4 +95,10 @@ class ApplicationConfig:
                     check(value,current[new_key])
 
         check(default_config,config)
+
+        # Initialize keys to default if they don't exist in the current config
+        for key in default_config:
+            if key not in config:
+                config[key] = default_config[key]
+
         return config
