@@ -1,10 +1,10 @@
 import time, os
 from valclient.exceptions import ResponseError
 
-from .utility_functions import ErrorHandling, Logger, ContentLoader
-from .localization.localization import Localizer
-from .lib.killable_thread import KillableThread
-from .lib.ystr_client import YstrClient
+from ..utility_functions import ErrorHandling, Logger, ContentLoader
+from ..localization.localization import Localizer
+from ..lib.killable_thread import KillableThread
+from ..lib.ystr_client import YstrClient
 
 # A thread that polls for contract changes
 class ContractManager:
@@ -13,7 +13,12 @@ class ContractManager:
         self.config = config
         self.client = valclient
         self.ystr_client = YstrClient(self.config)
+
+        # Fetch stuff
         ContentLoader.cache_contracts()
+        raw_contract_data = self.client.contracts_fetch()
+        ContentLoader.CONTENT_CACHE.completed_contracts = [contract["ContractDefinitionID"] for contract in raw_contract_data["Contracts"] if contract["ContractProgression"]["TotalProgressionEarned"] == 975000 and contract["ProgressionLevelReached"] == 10]
+
         self.equipped_contract = self.active_contract()
         self.current_contract = self.ystr_client.get_contract()
 
@@ -30,10 +35,18 @@ class ContractManager:
         while True:
             contract = self.ystr_client.get_contract()
             if contract != self.current_contract:
-                Logger.debug(f"Detected new set contract - activating '{contract}'.")
+                Logger.debug(f"Detected new set contract '{contract}'.")
 
-                self.client.contracts_activate(ContentLoader.get_contract(contract))
-                self.current_contract = contract
+                contract_id = ContentLoader.get_contract(contract)
+
+                if contract_id in ContentLoader.CONTENT_CACHE.completed_contracts:
+                    Logger.debug(f"Can't activate set contract '{contract}' because you already completed it! Reverting set contract back to {self.current_contract}.")
+
+                    self.ystr_client.update_contract(self.current_contract)
+                else:
+                    self.client.contracts_activate(contract_id)
+                    self.current_contract = contract
+                    self.equipped_contract = contract
 
             time.sleep(sleep_duration)
 

@@ -144,6 +144,7 @@ class ContentCache:
     def __init__(self):
         self.agents = None
         self.contracts = None
+        self.completed_contracts = None
 
 # Utility for loading game content details (this should only be used once per program instance)
 class ContentLoader:

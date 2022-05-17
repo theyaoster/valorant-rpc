@@ -1,13 +1,13 @@
 from valclient.exceptions import PhaseError, ResponseError
 import time, os
 
-from .utility_functions import ContentUtilities, ErrorHandling, Logger, ContentLoader
-from .localization.localization import Localizer
-from .lib.killable_thread import KillableThread
-from .lib.ystr_client import YstrClient
+from ..utility_functions import ContentUtilities, ErrorHandling, Logger, ContentLoader
+from ..localization.localization import Localizer
+from ..lib.killable_thread import KillableThread
+from ..lib.ystr_client import YstrClient
 
 # Implementation of a thread that polls for the player's game presence
-class Presence:
+class LiveStatus:
 
     def __init__(self, config):
         self.config = config

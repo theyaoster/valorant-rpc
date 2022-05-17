@@ -2,15 +2,14 @@ from InquirerPy.utils import color_print
 from colorama import Fore, Style, Cursor, ansi
 import subprocess, time, cursor, valclient, ctypes, os, sys, requests
 
-from .utility_functions import Filepath, Processes, Logger, ErrorHandling, VersionChecker
+from .localization.localization import Localizer
+from .utility_functions import ContentLoader, Filepath, Processes, Logger, ErrorHandling, VersionChecker
 from .lib.killable_thread import KillableThread
 from .config.app_config import ApplicationConfig
-from .systray import Systray
-from .presence import Presence
-from .contract import ContractManager
-from .lib.ystr_client import YstrClient
-
-from .localization.localization import Localizer
+from .config.constants import Constants
+from .daemons.systray import Systray
+from .daemons.live_status import LiveStatus
+from .daemons.contract_manager import ContractManager
 
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
@@ -31,7 +30,7 @@ class Startup:
             try:
                 Logger.debug("Creating presence object...")
 
-                self.presence = Presence(self.config)
+                self.status_daemon = LiveStatus(self.config)
             except Exception as e:
                 Logger.debug(f"Error creating presence: {e}")
 
@@ -48,7 +47,11 @@ class Startup:
             # Initialize client for VALORANT's client-api
             self.client = valclient.Client(region=Localizer.get_config_value("region", 0))
             self.client.activate()
-            self.presence.client = self.client
+            self.status_daemon.client = self.client
+
+            Logger.debug("Updating player data (this happens only once per launch)...")
+            player_data = self.client.rnet_fetch_active_alias()
+            self.status_daemon.ystr_client.update_game_data(f"{player_data['game_name']}#{player_data['tag_line']}")
 
             Logger.debug("About to initialize contract manager...")
 
@@ -68,7 +71,7 @@ class Startup:
 
             Logger.debug("About to dispatch presence thread...")
 
-            self.presence.start_thread() # Initialize the thread that will poll the player status
+            self.status_daemon.start_thread() # Initialize the thread that will poll the player status
 
             color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'startup_successful')}\n")])
             time.sleep(5)
@@ -78,7 +81,7 @@ class Startup:
 
             # Wait until systray thread terminates
             self.systray_thread.join()
-            self.presence.presence_thread.stop()
+            self.status_daemon.presence_thread.stop()
             self.contract_manager.sync_thread.stop()
             self.contract_manager.poll_thread.stop()
         else:
@@ -152,7 +155,7 @@ class Startup:
                     clear_last_line()
                     print()
 
-                    self.presence.update_if_status_changed(YstrClient.UPDATING_STATUS)
+                    self.status_daemon.update_if_status_changed(Constants.UPDATING_STATUS)
                     print(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Waiting until game is launched...")
                     update_wait_time = Localizer.get_config_value("startup", "check_if_updating_freq")
                     while not Processes.is_game_running():

@@ -1,5 +1,4 @@
 from InquirerPy import inquirer
-from InquirerPy.utils import color_print
 
 from .locales import Locales
 

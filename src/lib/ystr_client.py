@@ -8,14 +8,6 @@ class YstrClient:
 
     HTML_INDICATOR = "!doctype html"
     SECRET_REPLACEMENT = "REDACTED"
-
-    LOADING_STATUS = "Loading"
-    OFFLINE_STATUS = "Offline"
-    UPDATING_STATUS = "Updating"
-
-    LIVE_STATUS_PATH = "live_status"
-    CONTRACT_PATH = "contract"
-
     TIMEOUT = 5 # seconds
 
     def __init__(self, config):
@@ -32,28 +24,33 @@ class YstrClient:
         # Check if endpoint is reachable and if the call succeeds
         test_response = None
         try:
-            test_response = self.update_status(YstrClient.LOADING_STATUS)
+            test_response = self.update_status(Constants.LOADING_STATUS)
         except ReadTimeout:
             raise Exception(f"Timed out while testing connection to endpoint - the configured credentials or endpoint are probably wrong! Fix them in {self.config_path} and relaunch.")
 
-        if test_response is None or (test_response.status_code != 200) or (YstrClient.HTML_INDICATOR in str(test_response.content)):
+        if test_response is None or test_response.status_code != 200 or YstrClient.HTML_INDICATOR in str(test_response.content):
             raise Exception(f"Failed to call the endpoint! Check your configured credentials and endpoint (in {self.config_path}) and make sure they're correct.")
 
     # PUT /live_status
     def update_status(self, status):
         payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.STATUS), (self.name, self.secret, status)))
-        return self.call(requests.put, YstrClient.LIVE_STATUS_PATH, payload)
+        return self.call(requests.put, Constants.LIVE_STATUS_PATH, payload)
 
     # GET /contract
     def get_contract(self):
         payload = dict(zip((Constants.NAME, Constants.SECRET), (self.name, self.secret)))
-        response = self.call(requests.get, YstrClient.CONTRACT_PATH, payload)
+        response = self.call(requests.get, Constants.CONTRACT_PATH, payload)
         return response.json()[Constants.CONTRACT]
 
     # PUT /contract
     def update_contract(self, contract):
         payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.CONTRACT), (self.name, self.secret, contract)))
-        return self.call(requests.put, YstrClient.CONTRACT_PATH, payload)
+        return self.call(requests.put, Constants.CONTRACT_PATH, payload)
+
+    # PUT /game_data
+    def update_game_data(self, ign):
+        payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.IGN), (self.name, self.secret, ign)))
+        return self.call(requests.put, Constants.GAME_DATA_PATH, payload)
 
     # Generic method for making an http call to the configured endpoint
     def call(self, method, path, payload):
@@ -78,4 +75,4 @@ class YstrClient:
 
     # Mark the player as offline
     def offline(self):
-        return self.update_status(YstrClient.OFFLINE_STATUS)
+        return self.update_status(Constants.OFFLINE_STATUS)

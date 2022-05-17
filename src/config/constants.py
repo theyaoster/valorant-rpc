@@ -30,3 +30,14 @@ class Constants:
     ENDPOINT = "endpoint"
     STATUS = "status"
     CONTRACT = "contract_agent"
+    IGN = "ign"
+
+    # Values
+    LOADING_STATUS = "Loading"
+    OFFLINE_STATUS = "Offline"
+    UPDATING_STATUS = "Updating"
+
+    # API paths
+    LIVE_STATUS_PATH = "live_status"
+    CONTRACT_PATH = "contract"
+    GAME_DATA_PATH = "game_data"

@@ -3,10 +3,10 @@ from PIL import Image
 from pystray import Icon, Menu, MenuItem
 from InquirerPy.utils import color_print
 
-from .utility_functions import Filepath
-from .config.config_editor import ConfigEditor
-from .localization.localization import Localizer
-from .config.constants import Constants
+from ..utility_functions import Filepath
+from ..config.config_editor import ConfigEditor
+from ..localization.localization import Localizer
+from ..config.constants import Constants
 
 ICON_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), Constants.ICON_FILENAME))
 
