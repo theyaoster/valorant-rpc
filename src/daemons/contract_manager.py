@@ -23,7 +23,11 @@ class ContractManager:
         self.current_contract = self.ystr_client.get_contract()
 
         # Check for discrepancy between selected contract and active contract - favor the selected one
-        if self.current_contract != self.equipped_contract:
+        if self.current_contract is None:
+            Logger.debug(f"No remote contract set! Updating it to be '{self.equipped_contract}'.")
+
+            self.ystr_client.update_contract(self.equipped_contract)
+        elif self.current_contract != self.equipped_contract:
             Logger.debug(f"Remote contract is '{self.current_contract}' while locally, it is '{self.equipped_contract}'. Overriding to be '{self.current_contract}'.")
 
             self.client.contracts_activate(ContentLoader.get_contract(self.current_contract))
