@@ -67,9 +67,9 @@ class YstrClient:
             Logger.debug(f"{method_name} /{path} response: {response.content} with status code {response.status_code}. Headers: {response.headers}")
 
             return response
-        except ConnectionError as e:
+        except (ConnectionError, ReadTimeout) as e:
             # Connection aborted
-            Logger.debug(f"Connection interrupted: {e}")
+            Logger.debug(f"Error calling {method_name} {path}: {e}")
 
             return None
 
