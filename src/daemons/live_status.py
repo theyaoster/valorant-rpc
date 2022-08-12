@@ -90,20 +90,30 @@ class LiveStatus:
     # Status string for in menus
     def get_menu_status(self, data, content_data):
         _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
-        if data["partyState"] == "DEFAULT": # In lobby
+        partyState = data["partyState"]
+        if partyState == "DEFAULT": # In lobby
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {ContentUtilities.get_party_status(data)}"
-        elif data["partyState"] == "MATCHMAKING": # In queue
+        elif partyState == "MATCHMAKING": # In queue
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {ContentUtilities.get_party_status(data)}"
-        elif data["partyState"] == "MATCHMADE_GAME_STARTING": # Match found
-            return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
-        elif data["partyState"] == "CUSTOM_GAME_SETUP": # In Custom setup
+        elif partyState == "CUSTOM_GAME_SETUP": # In Custom setup
             data["MapID"] = data["matchMap"]
             _, map_name = ContentUtilities.fetch_map_data(data, content_data)
             return f"{Localizer.get_localized_text('presences', 'client_states', 'custom_setup')} - {map_name} {ContentUtilities.get_party_status(data)}"
+        elif partyState == "MATCHMADE_GAME_STARTING": # Match found
+            return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
+        elif partyState == "CUSTOM_GAME_STARTING": # Starting custom match
+            return f"Entering Customs {ContentUtilities.get_party_status(data)}"
+        elif partyState == "STARTING_MATCHMAKING": # Initializing queue
+            return f"Entering Queue {ContentUtilities.get_party_status(data)}"
+        elif partyState == "LEAVING_MATCHMAKING": # Exiting queue
+            return f"Exiting Queue {ContentUtilities.get_party_status(data)}"
+        elif partyState == "SOLO_EXPERIENCE_STARTING": # Not sure what this is
+            return f"SOLO_EXPERIENCE_STARTING - {map_name} {ContentUtilities.get_party_status(data)}"
         else:
             # Unknown party state
-            Logger.debug(f"Unknown party state: {data['partyState']}")
-            raise ValueError(f"Unknown party state: {data['partyState']}")
+            message = f"Unknown party state: {data['partyState']}"
+            Logger.debug(message)
+            raise ValueError(message)
 
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):

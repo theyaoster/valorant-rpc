@@ -64,14 +64,17 @@ class YstrClient:
         try:
             response = method(f"{self.endpoint}/{path}", headers={ 'Content-Type': 'application/json' }, json=payload, timeout=YstrClient.TIMEOUT)
 
-            Logger.debug(f"{method_name} /{path} response: {response.content} with status code {response.status_code}. Headers: {response.headers}")
+            Logger.debug(f"{method_name} /{path} completed {response.status_code}.")
 
             return response
-        except (ConnectionError, ReadTimeout) as e:
+        except ConnectionError as e:
             # Connection aborted
-            Logger.debug(f"Error calling {method_name} {path}: {e}")
+            Logger.debug(f"Connection error while calling {method_name} /{path}: {e}")
+        except ReadTimeout as e:
+            # Connection timed out
+            Logger.debug(f"Timed out while calling {method_name} /{path}: {e}")
 
-            return None
+        return None
 
     # Mark the player as offline
     def offline(self):

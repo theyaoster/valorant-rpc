@@ -3,7 +3,7 @@ class Constants:
     # Version data
     VERSION_NUMBERS = (0, 1, 3, 0)
     VERSION_STR = ".".join([str(num) for num in VERSION_NUMBERS[0:3]])
-    VERSION_SUFFIX = "b"
+    VERSION_SUFFIX = "c"
     VERSION_VSTR = "v" + VERSION_STR + VERSION_SUFFIX
     VERSION_FILENAME = "version.py"
     WHOAMI = "Brian Yao"
