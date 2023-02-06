@@ -91,7 +91,7 @@ class LiveStatus:
     def get_menu_status(self, data, content_data):
         _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
         partyState = data["partyState"]
-        if partyState == "DEFAULT": # In lobby
+        if partyState == "DEFAULT" or partyState == "ROSTER_SETUP": # In lobby
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {ContentUtilities.get_party_status(data)}"
         elif partyState == "MATCHMAKING": # In queue
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {ContentUtilities.get_party_status(data)}"
@@ -111,7 +111,7 @@ class LiveStatus:
             return f"SOLO_EXPERIENCE_STARTING - {map_name} {ContentUtilities.get_party_status(data)}"
         else:
             # Unknown party state
-            message = f"Unknown party state: {data['partyState']}"
+            message = f"Unknown party state: {partyState}"
             Logger.debug(message)
             raise ValueError(message)
 

@@ -46,4 +46,4 @@ version_file_content = f"""VSVersionInfo(
 with open(Filepath.get_path(Constants.VERSION_FILENAME), 'w') as version_file:
     version_file.write(version_file_content)
 
-print(f"Generated {Constants.VERSION_FILENAME}.\n")
+print(f"Generated {Constants.VERSION_FILENAME}.")

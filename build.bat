@@ -29,25 +29,26 @@
     CD /D "%~dp0"
 
 :--------------------------------------
-    REM Install pigar if it's not installed already
-    python -m pip install --upgrade pip | findstr /V /C:"Requirement already satisfied" | findstr /C:"Successfully installed"
-    pip install pigar | findstr /V /C:"Requirement already satisfied"
+    REM Install pipreqs if it's not installed already
+    call python -m pip install --upgrade pip | findstr /V /C:"Requirement already satisfied" | findstr /C:"Successfully installed"
+    call pip install pipreqs | findstr /V /C:"Requirement already satisfied"
+    call pip install PyInstaller | findstr /V /C:"Requirement already satisfied"
 
     REM Generate requirements.txt
-	echo N | pigar --without-referenced-comments >NUL
-    echo Generated requirements.txt. && echo.
+    echo. && echo Generating requirements.txt...
+	call pipreqs --encoding utf-8 --force >NUL
 
     REM Install dependencies
-    python -m pip install -r requirements.txt | findstr /V /C:"Requirement already satisfied"
-
-    REM upgrade installed dependencies
-    python -m pip install -r requirements.txt --upgrade | findstr /V /C:"Requirement already satisfied"
+    echo. && echo Installing dependencies...
+    call python -m pip install -r requirements.txt | findstr /V /C:"Requirement already satisfied"
 
     REM Generate version.py
-    python generate_version_file.py 2>&1
+    echo. && echo Generating version file...
+    call python generate_version_file.py 2>&1
 
     REM Generate final EXE
-    python -m PyInstaller main.py --name "VALORANT-ystr" --icon favicon.ico --hidden-import "pystray._win32" --onefile --version-file "version.py" --log-level WARN
+    echo. && echo Packaging EXE...
+    call python -m PyInstaller main.py --name "VALORANT-ystr" --icon favicon.ico --hidden-import "pystray._win32" --onefile --version-file "version.py" --log-level WARN
 
     echo. && echo Build complete.
     timeout /t 5 /nobreak
