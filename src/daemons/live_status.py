@@ -89,35 +89,34 @@ class LiveStatus:
 
     # Status string for in menus
     def get_menu_status(self, data, content_data):
-        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
-        partyState = data["partyState"]
-        if partyState == "DEFAULT" or partyState == "ROSTER_SETUP": # In lobby
+        mode_name = ContentUtilities.fetch_mode_name(data, content_data)
+        party_state = data["partyState"]
+        if party_state == "DEFAULT" or party_state == "ROSTER_SETUP": # In lobby
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'menu')} {ContentUtilities.get_party_status(data)}"
-        elif partyState == "MATCHMAKING": # In queue
+        elif party_state == "MATCHMAKING": # In queue
             return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'queue')} {ContentUtilities.get_party_status(data)}"
-        elif partyState == "CUSTOM_GAME_SETUP": # In Custom setup
-            data["MapID"] = data["matchMap"]
-            _, map_name = ContentUtilities.fetch_map_data(data, content_data)
+        elif party_state == "CUSTOM_GAME_SETUP": # In Custom setup
+            map_name = ContentUtilities.fetch_map_name(data, content_data)
             return f"{Localizer.get_localized_text('presences', 'client_states', 'custom_setup')} - {map_name} {ContentUtilities.get_party_status(data)}"
-        elif partyState == "MATCHMADE_GAME_STARTING": # Match found
+        elif party_state == "MATCHMADE_GAME_STARTING": # Match found
             return f"{mode_name} - Match Found {ContentUtilities.get_party_status(data)}"
-        elif partyState == "CUSTOM_GAME_STARTING": # Starting custom match
-            return f"Entering Customs {ContentUtilities.get_party_status(data)}"
-        elif partyState == "STARTING_MATCHMAKING": # Initializing queue
+        elif party_state == "CUSTOM_GAME_STARTING": # Starting custom match
+            return f"Starting Custom Game {ContentUtilities.get_party_status(data)}"
+        elif party_state == "STARTING_MATCHMAKING": # Initializing queue
             return f"Entering Queue {ContentUtilities.get_party_status(data)}"
-        elif partyState == "LEAVING_MATCHMAKING": # Exiting queue
+        elif party_state == "LEAVING_MATCHMAKING": # Exiting queue
             return f"Exiting Queue {ContentUtilities.get_party_status(data)}"
-        elif partyState == "SOLO_EXPERIENCE_STARTING": # Not sure what this is
-            return f"SOLO_EXPERIENCE_STARTING - {map_name} {ContentUtilities.get_party_status(data)}"
+        elif party_state == "SOLO_EXPERIENCE_STARTING": # Not sure what this is
+            return f"SOLO_EXPERIENCE_STARTING - {ContentUtilities.get_party_status(data)}"
         else:
             # Unknown party state
-            message = f"Unknown party state: {partyState}"
+            message = f"Unknown party state: {party_state}"
             Logger.debug(message)
             raise ValueError(message)
 
     # Status string for pregame (agent select)
     def get_pregame_status(self, data, content_data):
-        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+        mode_name = ContentUtilities.fetch_mode_name(data, content_data)
         return f"{mode_name} - Agent Select {ContentUtilities.get_party_status(data)}"
 
     # Status string for in-game (and the range)
@@ -126,13 +125,13 @@ class LiveStatus:
             data["MapID"] = "/Game/Maps/Poveglia/Range"
             return f"The Range {ContentUtilities.get_party_status(data)}"
         else:
-            _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+            mode_name = ContentUtilities.fetch_mode_name(data, content_data)
             my_score, other_score = data["partyOwnerMatchScoreAllyTeam"], data["partyOwnerMatchScoreEnemyTeam"]
             return f"{mode_name} - {my_score} to {other_score} {ContentUtilities.get_party_status(data)}"
 
     # Status string for AFK (Idle)
     def get_afk_status(self, data, content_data):
-        _, mode_name = ContentUtilities.fetch_mode_data(data, content_data)
+        mode_name = ContentUtilities.fetch_mode_name(data, content_data)
         return f"{mode_name} - {Localizer.get_localized_text('presences', 'client_states', 'away')} {ContentUtilities.get_party_status(data)}"
 
     # Helper for killing this thread while notifying the user and the web service

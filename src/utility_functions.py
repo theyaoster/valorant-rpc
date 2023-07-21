@@ -105,39 +105,33 @@ class ContentUtilities:
         return party_state, party_size
 
     @staticmethod
-    def fetch_map_data(coregame_data,content_data):
-        for gmap in content_data["maps"]:
-            if gmap["path"] == coregame_data["MapID"]:
-                return gmap["display_name"], gmap["display_name_localized"]
-        return "", ""
+    def fetch_map_name(coregame_data, content_data):
+        return next([gmap["display_name_localized"] for gmap in content_data["maps"] if gmap["path"] == coregame_data["matchMap"]], "")
 
     @staticmethod
-    def fetch_mode_data(data, content_data):
-        image = f"mode_{data['queueId'] if data['queueId'] in content_data['modes_with_icons'] else 'discovery'}"
-        mode_name = content_data['queue_aliases'][data['queueId']] if data["queueId"] in content_data["queue_aliases"].keys() else "Custom"
-
-        # For some reason, Custom games have a queueId of onefa, same as Replication...
-        if "Custom" in data['provisioningFlow'] and "Custom" not in mode_name:
+    def fetch_mode_name(data, content_data):
+        mode_name = data["queueId"]
+        if mode_name in content_data["queue_aliases"].keys():
+            mode_name = content_data["queue_aliases"][mode_name]
+        elif data["partyState"] == "CUSTOM_GAME_SETUP" or data["provisioningFlow"] == "CustomGame":
+            # For some reason, queueId does not change when switching to Custom, so we can't rely on that
             mode_name = "Custom"
             data["queueId"] = "custom"
+        else:
+            Logger.debug(f"Unknown game mode {mode_name} - add it to queue aliases.")
 
         mode_name = ContentUtilities.localize_content_name(mode_name, "presences", "modes", data["queueId"])
-        return image,mode_name
+        return mode_name
 
     @staticmethod
-    def localize_content_name(default,*keys):
+    def localize_content_name(default, *keys):
         localized = Localizer.get_localized_text(*keys)
-        if localized is not None:
-            return localized
-        return default
+        return default if localized is None else localized
 
     @staticmethod
     def get_party_status(data):
         size = ContentUtilities.build_party_state(data)[1]
-        if (size[0] == 1):
-            return "(solo)"
-        else:
-            return f"(in a {size[0]}-stack)"
+        return "(solo)" if size[0] == 1 else f"(in a {size[0]}-stack)"
 
 class ContentCache:
 
@@ -207,7 +201,9 @@ class ContentLoader:
                 "onefa": "Replication",
                 "custom": "Custom",
                 "snowball": "Snowball Fight",
-                "": "Custom",
+                "swiftplay": "Swiftplay",
+                "hurm": "Team Deathmatch",
+                "premier-seasonmatch": "Premier",
             },
             "team_aliases": {
                 "TeamOne": "Defender",
