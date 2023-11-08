@@ -36,17 +36,6 @@ class YstrClient:
         payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.STATUS), (self.name, self.secret, status)))
         return self.call(requests.put, Constants.LIVE_STATUS_PATH, payload)
 
-    # GET /contract
-    def get_contract(self):
-        payload = dict(zip((Constants.NAME, Constants.SECRET), (self.name, self.secret)))
-        response = self.call(requests.get, Constants.CONTRACT_PATH, payload).json()
-        return response[Constants.CONTRACT] if Constants.CONTRACT in response else None
-
-    # PUT /contract
-    def update_contract(self, contract_agent):
-        payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.CONTRACT), (self.name, self.secret, contract_agent)))
-        return self.call(requests.put, Constants.CONTRACT_PATH, payload)
-
     # PUT /game_data
     def update_game_data(self, ign):
         payload = dict(zip((Constants.NAME, Constants.SECRET, Constants.IGN), (self.name, self.secret, ign)))

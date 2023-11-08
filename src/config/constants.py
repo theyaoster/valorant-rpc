@@ -30,7 +30,6 @@ class Constants:
     SECRET = "secret"
     ENDPOINT = "endpoint"
     STATUS = "status"
-    CONTRACT = "contract_agent"
     IGN = "ign"
 
     # Values
@@ -40,5 +39,4 @@ class Constants:
 
     # API paths
     LIVE_STATUS_PATH = "live_status"
-    CONTRACT_PATH = "contract"
     GAME_DATA_PATH = "game_data"

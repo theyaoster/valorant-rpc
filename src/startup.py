@@ -9,7 +9,6 @@ from .config.app_config import ApplicationConfig
 from .config.constants import Constants
 from .daemons.systray import Systray
 from .daemons.live_status import LiveStatus
-from .daemons.contract_manager import ContractManager
 
 # Helper to clear out the second-to-last line of stdout
 def clear_last_line():
@@ -53,13 +52,6 @@ class Startup:
             player_data = self.client.rnet_fetch_active_alias()
             self.status_daemon.ystr_client.update_game_data(f"{player_data['game_name']}#{player_data['tag_line']}")
 
-            Logger.debug("About to initialize contract manager...")
-
-            # Initialize contract manager
-            self.contract_manager = ContractManager(self.client, self.config)
-            self.contract_manager.start_sync_thread()
-            self.contract_manager.start_poll_thread()
-
             Logger.debug("About to dispatch systray thread...")
 
             # Initialize the systray element
@@ -82,8 +74,6 @@ class Startup:
             # Wait until systray thread terminates
             self.systray_thread.join()
             self.status_daemon.presence_thread.stop()
-            self.contract_manager.sync_thread.stop()
-            self.contract_manager.poll_thread.stop()
         else:
             Logger.debug("Program is already running - erroring out.")
 

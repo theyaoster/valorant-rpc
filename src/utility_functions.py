@@ -106,7 +106,7 @@ class ContentUtilities:
 
     @staticmethod
     def fetch_map_name(coregame_data, content_data):
-        return next([gmap["display_name_localized"] for gmap in content_data["maps"] if gmap["path"] == coregame_data["matchMap"]], "")
+        return next(iter(gmap["display_name_localized"] for gmap in content_data["maps"] if gmap["path"] == coregame_data["matchMap"]), "")
 
     @staticmethod
     def fetch_mode_name(data, content_data):
@@ -137,8 +137,6 @@ class ContentCache:
 
     def __init__(self):
         self.agents = None
-        self.contracts = None
-        self.completed_contracts = None
 
 # Utility for loading game content details (this should only be used once per program instance)
 class ContentLoader:
@@ -153,24 +151,6 @@ class ContentLoader:
     def __fetch(endpoint="/", language="all"):
         data = ContentLoader.SESSION.get(f"https://valorant-api.com/v1{endpoint}?language={language}", timeout=ContentLoader.CONTENT_LOAD_TIMEOUT)
         return data.json()
-
-    @staticmethod
-    def cache_contracts():
-        raw_contract_data = ContentLoader.__fetch("/contracts", "en-US")
-        filtered_data = {}
-        for contract in raw_contract_data["data"]:
-            filtered_data[contract["displayName"].lower().split()[0]] = contract["uuid"]
-        ContentLoader.CONTENT_CACHE.contracts = filtered_data
-
-    @staticmethod
-    def get_contract(agent):
-        if ContentLoader.CONTENT_CACHE.contracts is None:
-            ContentLoader.cache_contracts()
-
-        if agent not in ContentLoader.CONTENT_CACHE.contracts:
-            raise ValueError(f"Unknown agent {agent}! Could not find their contract.")
-
-        return ContentLoader.CONTENT_CACHE.contracts[agent]
 
     @staticmethod
     def get_agents():

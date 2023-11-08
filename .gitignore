@@ -5,3 +5,4 @@ dist/
 version.py
 requirements.txt
 *.spec
+*.env

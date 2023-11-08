@@ -15,8 +15,6 @@ PLACEHOLDER_VALUE = "THIS IS A PLACEHOLDER"
 default_config = {
     "region": ["", Client.fetch_regions()],
     "presence_refresh_interval": 2,
-    "contract_poll_interval": 20,
-    "contract_sync_interval": 2,
     "locale": ["", [locale for locale, data in Locales.items() if data != {}]],
     "startup": {
         "game_launch_timeout": 60,
