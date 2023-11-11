@@ -1,4 +1,4 @@
-import requests, psutil, os, sys, json, ctypes, traceback, logging
+import requests, psutil, os, sys, json, ctypes, ctypes.wintypes, traceback, logging
 from InquirerPy.utils import color_print
 from requests.adapters import HTTPAdapter, Retry
 
@@ -8,14 +8,22 @@ from .config.constants import Constants
 # Get handle for console window
 kernel32 = ctypes.WinDLL('kernel32')
 user32 = ctypes.WinDLL('user32')
-hWnd = kernel32.GetConsoleWindow()
+kernel32.GetConsoleWindow.argtypes = ()
+kernel32.GetConsoleWindow.restype = ctypes.wintypes.HWND
+user32.ShowWindow.argtypes = ctypes.wintypes.HWND, ctypes.wintypes.INT
+user32.ShowWindow.restype = ctypes.wintypes.BOOL
+CONSOLE_WINDOW = kernel32.GetConsoleWindow()
 
-# Erro handling
+# From https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
+SW_HIDE = 0
+SW_SHOWNORMAL = 1
+
+# Error handling
 class ErrorHandling:
 
     @staticmethod
     def handle_error(error=None):
-        user32.ShowWindow(hWnd, 1)
+        ConsoleWindow.show()
         kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), (0x4|0x80|0x20|0x2|0x10|0x1|0x40|0x100))
         color_print([("Red bold", Localizer.get_localized_text("prints", "errors", "error_message"))])
         print()
@@ -25,6 +33,28 @@ class ErrorHandling:
             color_print([("Red bold", str(error))])
         print()
         input(Localizer.get_localized_text("prints", "errors", "exit"))
+
+# For controlling the console window
+class ConsoleWindow:
+
+    # Tracks whether the console window is visible
+    visible = False
+
+    @staticmethod
+    def show():
+        ConsoleWindow.visible = True
+        user32.ShowWindow(CONSOLE_WINDOW, SW_SHOWNORMAL)
+
+    @staticmethod
+    def hide():
+        ConsoleWindow.visible = False
+        # This currently fails for Windows Terminal, see https://github.com/microsoft/terminal/issues/12464 - use Windows Console Host instead
+        user32.ShowWindow(CONSOLE_WINDOW, SW_HIDE)
+
+    @staticmethod
+    def toggle():
+        ConsoleWindow.visible = not ConsoleWindow.visible
+        ConsoleWindow.show() if ConsoleWindow.visible else ConsoleWindow.hide()
 
 # Utilities for active process management and detection
 class Processes:
@@ -118,7 +148,7 @@ class ContentUtilities:
             mode_name = "Custom"
             data["queueId"] = "custom"
         else:
-            Logger.debug(f"Unknown game mode {mode_name} - add it to queue aliases.")
+            Logger.debug(f"WARN: Unknown game mode {mode_name} - add it to queue aliases.")
 
         mode_name = ContentUtilities.localize_content_name(mode_name, "presences", "modes", data["queueId"])
         return mode_name

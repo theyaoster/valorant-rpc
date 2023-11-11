@@ -1,9 +1,9 @@
 from InquirerPy.utils import color_print
 from colorama import Fore, Style, Cursor, ansi
-import subprocess, time, cursor, valclient, ctypes, os, sys, requests
+import subprocess, time, cursor, valclient, os, sys, requests
 
 from .localization.localization import Localizer
-from .utility_functions import ContentLoader, Filepath, Processes, Logger, ErrorHandling, VersionChecker
+from .utility_functions import ConsoleWindow, Filepath, Processes, Logger, ErrorHandling, VersionChecker
 from .lib.killable_thread import KillableThread
 from .config.app_config import ApplicationConfig
 from .config.constants import Constants
@@ -67,7 +67,7 @@ class Startup:
 
             color_print([("LimeGreen", f"{Localizer.get_localized_text('prints', 'startup', 'startup_successful')}\n")])
             time.sleep(5)
-            ctypes.WinDLL('user32').ShowWindow(ctypes.WinDLL('kernel32').GetConsoleWindow(), 0) # Hide the window
+            ConsoleWindow.hide()
 
             Logger.debug("Program's up and running. Waiting for systray thread to terminate...")
 
