@@ -1,7 +1,8 @@
 from valclient.exceptions import PhaseError, ResponseError
 import time, os
 
-from ..utility_functions import ContentUtilities, ErrorHandling, Logger, ContentLoader
+from ..config.constants import Constants
+from ..utility_functions import ContentUtilities, ErrorHandling, Filepath, Logger, ContentLoader
 from ..localization.localization import Localizer
 from ..lib.killable_thread import KillableThread
 from ..lib.ystr_client import YstrClient
@@ -29,6 +30,7 @@ class LiveStatus:
             self.content_data = ContentLoader.load_all_content(self.client)
             self.presence_thread = KillableThread(target=self.main_loop, daemon=True)
             self.presence_thread.start()
+            Logger.debug("Live status thread started.")
         except Exception as e:
             Logger.debug(f"Error occured while fetching content or initiating presence thread: {e}")
 
@@ -39,6 +41,7 @@ class LiveStatus:
     def update_if_status_changed(self, status_override=None):
         last_status = self.current_status
         live_status = status_override
+        presence_data = None
         if status_override is None:
             try:
                 presence_data = self.client.fetch_presence()
@@ -57,7 +60,25 @@ class LiveStatus:
                 self.kill_presence_thread(f"Presence data was blank - assuming game was closed. Exiting.")
 
         if last_status != live_status and live_status is not None: # If live_status is None, something like a PhaseError occurred
-            self.ystr_client.update_status(live_status)
+            # Publish to web
+            if self.config["publish_state_to_web"] and presence_data is not None:
+                self.ystr_client.update_status(live_status)
+
+            # Publish to files
+            if self.config["publish_state_to_file"] and presence_data is not None:
+                for field, filenames in self.config[Constants.STATE_FILES].items():
+                    if presence_data[field] is None:
+                        Logger.debug(f"Field {field} not found in presence data while logging!")
+                        next
+
+                    if isinstance(filenames, str):
+                        filenames = [ filenames ]
+                    if isinstance(filenames, list):
+                        for filename in filenames:
+                            with open(Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), filename)), 'w') as file:
+                                file.write(presence_data[field])
+                    else:
+                        raise ValueError(f"Field {field} must be mapped to a filename string or list of filenames!")
             self.current_status = live_status
 
     # Get the status of a player

@@ -48,10 +48,6 @@ class Startup:
             self.client.activate()
             self.status_daemon.client = self.client
 
-            Logger.debug("Updating player data (this happens only once per launch)...")
-            player_data = self.client.rnet_fetch_active_alias()
-            self.status_daemon.ystr_client.update_game_data(f"{player_data['game_name']}#{player_data['tag_line']}")
-
             Logger.debug("About to dispatch systray thread...")
 
             # Initialize the systray element
@@ -98,6 +94,8 @@ class Startup:
                     self.handle_timeout("game presence")
 
                 time.sleep(1) # Wait 1 second
+
+            Logger.debug(f"Game presence detected after {presence_timer} seconds.")
         except requests.exceptions.ConnectionError:
             Logger.debug("Failed to fetch presence from the client due to refused connection - exiting.")
 
@@ -137,7 +135,6 @@ class Startup:
             # Check if game is updating
             if launch_timer == update_time:
                 Logger.debug("Checking if the game is updating...")
-                Logger.debug(f"Process list: {Processes.running_processes()}")
 
                 if Processes.is_updating():
                     Logger.debug("Game is updating. Waiting for user to execute manual step...")
@@ -146,7 +143,7 @@ class Startup:
                     print()
 
                     self.status_daemon.update_if_status_changed(Constants.UPDATING_STATUS)
-                    print(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating. Waiting until game is launched...")
+                    print(f"{Style.BRIGHT}{Fore.YELLOW}I think your game is updating (or you need to sign in). Waiting until game is launched...")
                     update_wait_time = Localizer.get_config_value("startup", "check_if_updating_freq")
                     while not Processes.is_game_running():
                         time.sleep(update_wait_time)

@@ -10,8 +10,6 @@ from .constants import Constants
 
 CONFIG_FILEPATH = Filepath.get_path(os.path.join(Filepath.get_appdata_folder(), Constants.CONFIG_FILENAME))
 
-PLACEHOLDER_VALUE = "THIS IS A PLACEHOLDER"
-
 default_config = {
     "region": ["", Client.fetch_regions()],
     "presence_refresh_interval": 2,
@@ -22,9 +20,14 @@ default_config = {
         "check_if_updating_time": 30,
         "check_if_updating_freq": 10,
     },
-    "endpoint": PLACEHOLDER_VALUE, # Adding these here so they aren't autodeleted upon launch
-    "name": PLACEHOLDER_VALUE,
-    "secret": PLACEHOLDER_VALUE
+    "publish_state_to_web": False, # Set to True to enable publishing state to web endpoint
+    Constants.ENDPOINTS: { # Hash of endpoints and where to include the status in the json payload (must include $STATUS as a placeholder)
+        # www.myurl.com": { "some_field": "$STATUS" }
+    },
+    "publish_state_to_file": False, # Set to True to enable publishing state to file
+    Constants.STATE_FILES: { # Hash of data fields and the text files they should be written to (this will truncate, not append!)
+        # "sessionLoopState": [ "state.txt" ]
+    }
 }
 
 class ApplicationConfig:
@@ -34,14 +37,23 @@ class ApplicationConfig:
         # Handle first-time startup when config file doesn't exist
         if not os.path.isfile(CONFIG_FILEPATH):
             os.makedirs(Filepath.get_path(os.path.join(Filepath.get_appdata_folder())), exist_ok=True)
-            print(f"{Fore.YELLOW}As this is the first time you're launching this, you'll need to enter the following required configs.\n")
+            print(f"{Fore.YELLOW}Please enter the required configs.\n")
 
             # Prompt user for required configs
             cursor.show()
             initial_config = copy.deepcopy(default_config)
-            initial_config["name"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered name: ").strip()
-            initial_config["secret"] = getpass.getpass(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
-            initial_config["endpoint"] = input(f"{Style.BRIGHT}{Fore.WHITE}Enter the web endpoint you wish to reach: ").strip()
+
+            publish_web = input(f"{Style.BRIGHT}{Fore.WHITE}Publish your game status? (y/N) ").strip()
+            if publish_web.lower() in ["y", "yes"]:
+                name = input(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered name: ").strip()
+                secret = getpass.getpass(f"{Style.BRIGHT}{Fore.WHITE}Enter your registered secret: ").strip()
+                endpoint = input(f"{Style.BRIGHT}{Fore.WHITE}Enter the web URL you wish to reach: ").strip()
+                if not endpoint.startswith("https://"):
+                    endpoint = "https://" + endpoint
+
+                initial_config["publish_state_to_web"] = True
+                initial_config[Constants.ENDPOINTS] = { endpoint: { Constants.STATUS: Constants.STATUS_PLACEHOLDER, Constants.NAME: name, Constants.SECRET: secret } }
+
             print()
             cursor.hide()
 

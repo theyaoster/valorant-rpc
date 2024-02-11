@@ -1,9 +1,9 @@
 class Constants:
 
     # Version data
-    VERSION_NUMBERS = (0, 1, 3, 0)
+    VERSION_NUMBERS = (0, 1, 4, 0)
     VERSION_STR = ".".join([str(num) for num in VERSION_NUMBERS[0:3]])
-    VERSION_SUFFIX = "c"
+    VERSION_SUFFIX = ""
     VERSION_VSTR = "v" + VERSION_STR + VERSION_SUFFIX
     VERSION_FILENAME = "version.py"
     WHOAMI = "Brian Yao"
@@ -28,9 +28,12 @@ class Constants:
     # Field names
     NAME = "name"
     SECRET = "secret"
-    ENDPOINT = "endpoint"
     STATUS = "status"
-    IGN = "ign"
+    ENDPOINTS = "endpoints"
+    STATE_FILES = "state_files"
+
+    # Field placeholders
+    STATUS_PLACEHOLDER = "$STATUS"
 
     # Values
     LOADING_STATUS = "Loading"

@@ -32,11 +32,16 @@
     REM Install pipreqs if it's not installed already
     call python -m pip install --upgrade pip | findstr /V /C:"Requirement already satisfied" | findstr /C:"Successfully installed"
     call pip install pipreqs | findstr /V /C:"Requirement already satisfied"
+    call pip install pip-tools | findstr /V /C:"Requirement already satisfied"
     call pip install PyInstaller | findstr /V /C:"Requirement already satisfied"
 
     REM Generate requirements.txt
-    echo. && echo Generating requirements.txt...
-	call pipreqs --encoding utf-8 --force >NUL
+    echo. && echo Generating requirements.in...
+	call pipreqs --encoding utf-8 --savepath requirements.in --force >NUL
+
+    echo. && echo Removing duplicate dependencies and generating requirements.txt...
+    call python remove_duplicate_requirements.py
+    call pip-compile
 
     REM Install dependencies
     echo. && echo Installing dependencies...
@@ -51,4 +56,4 @@
     call python -m PyInstaller main.py --name "VALORANT-ystr" --icon favicon.ico --hidden-import "pystray._win32" --onefile --version-file "version.py" --log-level WARN
 
     echo. && echo Build complete.
-    timeout /t 5 /nobreak
+    timeout /t 10 /nobreak

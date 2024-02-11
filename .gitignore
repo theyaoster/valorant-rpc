@@ -3,6 +3,7 @@ __pycache__/
 build/
 dist/
 version.py
+requirements.in
 requirements.txt
 *.spec
 *.env
